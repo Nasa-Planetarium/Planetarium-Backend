@@ -37,15 +37,18 @@ public record EmberlineProperties(Cors cors, Limits limits, Errors errors, Relea
         }
     }
 
-    /** Field names become the snake_case keys of /api/v1/version {@code limits}. */
-    public record Limits(int hotspotsDaysReference, int hotspotsDaysAll, int hotspotsLimitMax, int summaryDayDays,
-                         int summaryMonthYears, int calendarYears, int polygonVertices, int cellsMax, int csvRows) {
+    /**
+     * Field names become the snake_case keys of /api/v1/version {@code limits}. The /hotspots day spans are not here:
+     * they live in {@code emberline.hotspots.*} (one source for enforcement and /version).
+     */
+    public record Limits(int hotspotsLimitMax, int summaryDayDays, int summaryMonthYears, int calendarYears,
+                         int polygonVertices, int cellsMax, int csvRows) {
 
-        public static final Limits CONTRACT = new Limits(92, 31, 10000, 366, 40, 40, 5000, 10000, 100000);
+        public static final Limits CONTRACT = new Limits(10000, 366, 40, 40, 5000, 10000, 100000);
 
         public Limits {
-            int[] all = {hotspotsDaysReference, hotspotsDaysAll, hotspotsLimitMax, summaryDayDays, summaryMonthYears,
-                    calendarYears, polygonVertices, cellsMax, csvRows};
+            int[] all = {hotspotsLimitMax, summaryDayDays, summaryMonthYears, calendarYears, polygonVertices, cellsMax,
+                    csvRows};
             for (int v : all) {
                 if (v <= 0) {
                     throw new IllegalArgumentException("emberline.limits.* must be positive");

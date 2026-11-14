@@ -206,6 +206,15 @@ class B1ApiTest extends AppTestBase {
         HttpResponse<String> r = get("/api/v1/aois/KR/boundary");
         assertThat(r.statusCode()).isEqualTo(200);
         assertThat(r.headers().firstValue("Content-Type").orElse("")).startsWith("application/geo+json");
+        // F-406: Accept application/json gets the same GeoJSON body as application/json; geo+json stays the default
+        HttpResponse<String> asJson = get("/api/v1/aois/KR/boundary", "Accept", "application/json");
+        assertThat(asJson.statusCode()).isEqualTo(200);
+        assertThat(asJson.headers().firstValue("Content-Type").orElse("")).startsWith("application/json");
+        assertThat(asJson.body()).isEqualTo(r.body());
+        assertThat(asJson.headers().firstValue("ETag")).isNotEqualTo(r.headers().firstValue("ETag"));
+        assertThat(get("/api/v1/aois/KR/boundary", "Accept", "application/geo+json").headers().firstValue("Content-Type").orElse(""))
+                .startsWith("application/geo+json");
+        assertThat(get("/api/v1/aois/KR/boundary", "Accept", "text/csv").statusCode()).isEqualTo(406);
         JsonNode body = json(r);
         assertThat(body.get("type").asString()).isEqualTo("Feature");
         assertThat(body.get("properties").get("aoi_id").asString()).isEqualTo("KR");

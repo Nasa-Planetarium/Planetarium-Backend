@@ -39,7 +39,7 @@ class AoiController {
         return getAoi.get(release, aoiId);
     }
 
-    @GetMapping(path = "/aois/{aoiId}/boundary", produces = GeoJson.MEDIA_TYPE)
+    @GetMapping(path = "/aois/{aoiId}/boundary", produces = {GeoJson.MEDIA_TYPE, "application/json"})
     BoundaryFeature boundary(ReleaseRef release, @PathVariable("aoiId") @Pattern(regexp = Patterns.AOI_ID) String aoiId) {
         return getAoi.boundary(release, aoiId);
     }

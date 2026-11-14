@@ -658,6 +658,40 @@ class B2ApiTest extends B2AppBase {
     }
 
     @Test
+    @Order(22)
+    void rsp3_aRangeThatExcludesNoDataDayIsTheWholeAoiMonthRow() throws Exception {
+        // month to date: 2026-11 has as_of_date 2026-11-13, so 11-01..11-14 (and 11-01..11-13) cut no data day
+        for (String end : List.of("2026-11-13", "2026-11-14", "2026-11-30")) {
+            JsonNode s = ok("/api/v1/aois/KR/summary?start=2026-11-01&end=" + end + "&freq=month");
+            JsonNode nov = s.get("series").get(0);
+            assertThat(nov.get("basis").asString()).as(end).isEqualTo("aoi_month");
+            assertThat(nov.get("value").doubleValue()).as(end).isEqualTo(44.336265563964844);
+            assertThat(nov.get("value_projected").doubleValue()).isEqualTo(102.31446064148237);
+            assertThat(nov.get("as_of_date").asString()).isEqualTo("2026-11-13");
+            assertThat(nov.get("status").asString()).isEqualTo("partial");
+            assertThat(nov.get("flags").toString()).doesNotContain("partial_range");
+            assertThat(s.get("total").get("value").doubleValue()).isEqualTo(44.336265563964844);
+        }
+        String csv = get("/api/v1/aois/KR/summary?start=2026-11-01&end=2026-11-14&freq=month&format=csv").body();
+        String line = csv.lines().filter(l -> l.startsWith("KR,2026-11-01,")).findFirst().orElseThrow();
+        assertThat(line).contains("44.336265563964844").contains(",aoi_month,").doesNotContain("partial_range");
+        // a range that cuts a data day (11-13 or 11-01) keeps the cell_day path (R-SP2)
+        for (String range : List.of("start=2026-11-01&end=2026-11-12", "start=2026-11-02&end=2026-11-14")) {
+            JsonNode nov = ok("/api/v1/aois/KR/summary?" + range + "&freq=month").get("series").get(0);
+            assertThat(nov.get("basis").asString()).as(range).isEqualTo("cell_day");
+            assertThat(nov.get("flags").toString()).as(range).contains("partial_range");
+        }
+        // a full past month (as_of_date null) is unchanged; cutting its last day is cell_day
+        double march = ((Number) B2Support.monthRows(V11, true, "KR", 2025, 2025).get(2).get(2)).doubleValue();
+        JsonNode full = ok("/api/v1/aois/KR/summary?start=2025-03-01&end=2025-03-31&freq=month").get("series").get(0);
+        assertThat(full.get("basis").asString()).isEqualTo("aoi_month");
+        assertThat(full.get("value").doubleValue()).isEqualTo(march);
+        JsonNode cut = ok("/api/v1/aois/KR/summary?start=2025-03-01&end=2025-03-30&freq=month").get("series").get(0);
+        assertThat(cut.get("basis").asString()).isEqualTo("cell_day");
+        assertThat(cut.get("flags").toString()).contains("partial_range");
+    }
+
+    @Test
     @Order(30)
     void b2_17_releaseSwitchUsesANewKeyWithTheNewDataVersion() throws Exception {
         String coreSha = Fixtures.sha256(ROOT.resolve("core/SHA256SUMS"));

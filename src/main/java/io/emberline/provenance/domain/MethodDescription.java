@@ -15,7 +15,9 @@ public final class MethodDescription {
             period("modis_m2v", "2002-07", "2012-01", "추정 (MODIS → VIIRS)", null),
             period("snpp_observed", "2012-02", "2026-10", "실측", null),
             period("n20_bridge", "2026-11", null, "실측 (NOAA-20 환산 × 1.013)", 1.013),
-            period("n21_bridge", null, null, "대체 위성 (NOAA-21 × 1.053, NOAA-20 결측일)", 1.053));
+            period("n21_bridge", null, null, "대체 위성 (NOAA-21 × 1.053, NOAA-20 결측일)", 1.053),
+            cellDayOnly("modis_m2v_background", "배경 예측 운반 행 (MODIS 기간 감지 없는 칸의 m2v 예측, 1일 행의 residual_month에만 실림, 값 0)"),
+            cellDayOnly("modis_fallback_m2v_predicted", "MODIS 대체 (NOAA-20·NOAA-21을 쓸 수 없는 NRT 날, MODIS 점 × m2v 예측 배율)"));
     public static final List<String> STATUSES = List.of("ok", "nrt", "partial", "missing", "out_of_range");
     public static final Map<String, Object> VERDICT_RULE = verdictRule();
     public static final List<Map<String, Object>> RULES = List.of(
@@ -41,6 +43,13 @@ public final class MethodDescription {
         if (factor != null) {
             m.put("factor", factor);
         }
+        return m;
+    }
+
+    /** A code that only harmonized_cell_day.parquet carries (ruling R-VS1); never an aoi_month or cell-month value_source. */
+    private static Map<String, Object> cellDayOnly(String source, String labelKo) {
+        Map<String, Object> m = period(source, null, null, labelKo, null);
+        m.put("files", List.of("harmonized_cell_day"));
         return m;
     }
 

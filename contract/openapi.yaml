@@ -165,6 +165,7 @@ paths:
       operationId: getAoiBoundary
       summary: 지역 경계 (GeoJSON Feature)
       description: |
+        `application/geo+json` 이 기본; `Accept: application/json` 이면 같은 본문을 `Content-Type: application/json` 으로 (F-406).
         release `aoi_boundaries.geojson` 피처 5,038개. 경계 없는 AOI 13개(`WORLD`, `CONT_*` 8개, `ADM1_BRI-00`·`BRT-00`·`CNM-00`·`SPI-00`)는 404 `unknown_aoi` 가 아니라 200 + `geometry: null`.
       x-handoff-alias:
         path: /aoi
@@ -181,8 +182,13 @@ paths:
             application/geo+json:
               schema:
                 $ref: '#/components/schemas/BoundaryFeature'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoundaryFeature'
         '404':
           $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '503':
           $ref: '#/components/responses/Unavailable'
   /aois/{aoiId}/calendar:
@@ -489,8 +495,9 @@ paths:
       description: |
         점 = 활성 release 의 `harmonized_hotspots/{reference,other}/year=YYYY/month=MM/*.parquet`(release SHA256SUMS 밖, 따로 배포).
         그 폴더가 없으면 503 `data_not_loaded`(「준비 중」). 기간이 닿는 연·월 폴더만 읽는다. `layer=reference` = reference/, `all` = reference/ + other/.
-        **확대했을 때만 점**: bbox(또는 `aoi_id` 경계의 bbox) 넓이 ≤ 100 제곱도 그리고 기간 ≤ 366일
-        (`emberline.hotspots.max-area-deg2`·`max-days`). 넘으면 400 `range_too_large`(40101) — 넓은 범위는 칸(`/cells`).
+        **확대했을 때만 점**: bbox(또는 `aoi_id` 경계의 bbox) 넓이 ≤ 100 제곱도 그리고 기간 ≤ 92일(`layer=reference`)·31일(`layer=all`)
+        (`emberline.hotspots.max-area-deg2`·`max-days-reference`·`max-days-all`; `/version` `limits.hotspots_days_reference`·`hotspots_days_all` 이
+        같은 설정을 그대로 보인다). 넘으면 400 `range_too_large`(40101) — 넓은 범위는 칸(`/cells`).
         `aoi_id` 는 점 좌표가 AOI 경계 안(JTS contains, bbox 로 먼저 거름)인 점.
         합계는 `is_reference=true` 점만(`reference_sum`, `limit`·`cursor`·`layer` 와 무관). `layer=all` 은 지도 표시용.
         `reference_sum.note`: 점 합계에는 MODIS 시기 잔차(residual)가 없어 `/summary` 보다 작을 수 있다.
@@ -547,6 +554,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '409':
           $ref: '#/components/responses/Conflict'
         '503':
@@ -562,6 +571,7 @@ paths:
         결측 달(2001-06)에는 칸 행이 있으면서 `value=null` (release 14,502행 — 핸드오프 「행 없으면 0」과 다른 모양, R6).
         칸 수 > 10,000 이거나 level world·continent 면 400 `range_too_large`(40103).
         칸 합 ≠ `aoi_month.value` (R13).
+        `application/geo+json` 이 기본; `Accept: application/json` 이면 같은 본문을 `Content-Type: application/json` 으로 (F-406).
       x-handoff-alias:
         path: /cells
         served_at: /api/cells
@@ -588,12 +598,17 @@ paths:
             application/geo+json:
               schema:
                 $ref: '#/components/schemas/CellCollection'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CellCollection'
         '304':
           $ref: '#/components/responses/NotModified'
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '503':
           $ref: '#/components/responses/Unavailable'
   /satellite-status:
@@ -1039,6 +1054,10 @@ components:
         값의 출처. 달 단위 경계(release 실측): terra 2000-11~2002-06 · modis_m2v 2002-07~**2012-01** · snpp 2012-02~2026-10 · n20_bridge 2026-11(NOAA-20 × 1.013, 핸드오프 §3).
         `n21_bridge`(NOAA-20 결측일 × 1.053)는 release 0행이지만 핸드오프 코드값이라 계약에 남긴다.
         v0 이름(`modis_harmonized`, `noaa20_bridged`, `modis_harmonized_terra_only`)은 적재기만 받고 응답에는 안 나온다.
+        `harmonized_cell_day.parquet` 전용 코드(R-VS1, 적재기가 이 파일에서만 받는다; aoi_month·cell_month 값에는 없다):
+        `modis_m2v_background` — 배경 예측 운반 행(MODIS 기간 감지 없는 칸의 m2v 예측; 값 0·n_points 0, 1일 행의 residual_month에만 실림, summary month_residual.by_type 키로만 나온다);
+        `modis_fallback_m2v_predicted` — NOAA-20·NOAA-21을 쓸 수 없는 NRT 날의 MODIS 대체(MODIS 점 × m2v 예측 배율; v1.1 실파일 156행, 모두 2026-11-14).
+      x-cell-day-only: [modis_m2v_background, modis_fallback_m2v_predicted]
       x-release-rows:
         harmonized_cell_month: {modis_m2v: 25124932, snpp_observed: 22517158, modis_m2v_terra: 3828671, n20_bridge: 91881, n21_bridge: 0}
         aoi_month: {snpp_observed: 894027, modis_m2v: 580865, modis_m2v_terra: 101020, n20_bridge: 5051, n21_bridge: 0}
@@ -1364,7 +1383,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/Interval'
         - $ref: '#/components/schemas/EventColumns'
-      required: [cell_id, value, value_lo, value_hi, raw_modis, raw_viirs, value_source, data_source, status]
+      required: [cell_id, value, value_lo, value_hi, raw_modis, raw_viirs, value_source, data_source, status, interval_out_of_range, interval_unavailable]
       properties:
         cell_id: {$ref: '#/components/schemas/CellId'}
         cell_lat: {type: number, description: 칸 중심 위도(정본은 싣는다; 시제품 v3 는 geometry 로만)}
@@ -1374,6 +1393,16 @@ components:
         value_source: {$ref: '#/components/schemas/ValueSource'}
         data_source: {$ref: '#/components/schemas/DataSource'}
         status: {$ref: '#/components/schemas/MonthStatus'}
+        interval_out_of_range:
+          type: boolean
+          description: |
+            읽기 경로 표시(E3): `value` 가 [`value_lo`, `value_hi`] 밖이다(release 칸 표 441,269행, 전부 modis_m2v).
+            값은 파일 그대로 두고 이 칸의 구간은 쓰지 않는다(그리지 않음·자르지 않음). 그 밖에는 false.
+        interval_unavailable:
+          type: boolean
+          description: |
+            읽기 경로 표시: 이 칸에 구간이 없다 — `value_lo`·`value_hi` 가 null(Terra 단독 2000-11~2002-06, meta `cell_interval`)
+            이거나 결측 달(status missing, `value` 도 null). 그 기간 구간은 AOI 단위(`aoi_month`)로만. 그 밖에는 false.
     CellFeature:
       type: object
       additionalProperties: false
