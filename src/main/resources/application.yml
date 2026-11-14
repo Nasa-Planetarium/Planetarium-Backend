@@ -121,6 +121,10 @@ emberline:
       capacity: 30
       refill-tokens: 30
       refill-period: 1m
+    tiles:
+      capacity: 240
+      refill-tokens: 240
+      refill-period: 1m
   hotspots:
     max-area-deg2: 100
     max-days-reference: 92

@@ -22,10 +22,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Public-chain abuse defence, before the security chain: scope {@code ip} on every /api request and scope
- * {@code heavy} on the routes of {@code heavy-costs}. Buckets live on redis-durable under
- * {@code em:{env}:rl:{scope}:{hmac(subject)}} (the client address never appears in a key). Over the limit → 429
- * rate_limited (10301) with an integer Retry-After.
+ * Public-chain abuse defence, before the security chain: scope {@code ip} on every /api request, scope
+ * {@code heavy} on the routes of {@code heavy-costs} and scope {@code tiles} on the FIRMS WMS tile routes of
+ * {@code tile-costs}. Buckets live on redis-durable under {@code em:{env}:rl:{scope}:{hmac(subject)}} (the client
+ * address never appears in a key). Over the limit → 429 rate_limited (10301) with an integer Retry-After and the
+ * exhausted scope named in {@code detail}.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
@@ -59,19 +60,29 @@ public class RateLimitFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String subject = hmac(clients.subject(request));
         RateLimitProperties.Limit ip = properties.ip();
+        String scope = "ip";
         TokenBuckets.Result r = buckets.take(keys.key("rl:ip:" + subject), 1, ip.capacity(), ip.refillTokens(), ip.refillPeriod());
-        Integer cost = properties.heavyCosts().get(path(request));
-        if (r.granted() && cost != null) {
-            RateLimitProperties.Limit heavy = properties.heavy();
-            r = buckets.take(keys.key("rl:heavy:" + subject), cost, heavy.capacity(), heavy.refillTokens(), heavy.refillPeriod());
+        String path = path(request);
+        Integer heavyCost = properties.heavyCosts().get(path);
+        Integer tileCost = properties.tileCosts().get(path);
+        if (r.granted() && heavyCost != null) {
+            scope = "heavy";
+            r = take(scope, subject, heavyCost, properties.heavy());
+        } else if (r.granted() && tileCost != null) {
+            scope = "tiles";
+            r = take(scope, subject, tileCost, properties.tiles());
         }
         if (!r.granted()) {
             response.setHeader(HttpHeaders.RETRY_AFTER, Long.toString(r.retryAfterSeconds()));
-            problems.write(request, response, ErrorCode.RATE_LIMITED, null, "too many requests; retry after "
-                    + r.retryAfterSeconds() + " s");
+            problems.write(request, response, ErrorCode.RATE_LIMITED, null, "too many requests (rate limit scope "
+                    + scope + "); retry after " + r.retryAfterSeconds() + " s");
             return;
         }
         chain.doFilter(request, response);
+    }
+
+    private TokenBuckets.Result take(String scope, String subject, long cost, RateLimitProperties.Limit limit) {
+        return buckets.take(keys.key("rl:" + scope + ":" + subject), cost, limit.capacity(), limit.refillTokens(), limit.refillPeriod());
     }
 
     private static String path(HttpServletRequest request) {
