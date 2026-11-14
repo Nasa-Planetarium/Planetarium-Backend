@@ -1,9 +1,9 @@
--- provenance: m2v_meta.json (as-is jsonb), month status of the release (WORLD rows of aoi_month.parquet, copied),
+-- provenance: m2v_meta.json (json, as-is), month status of the release (WORLD rows of aoi_month.parquet, copied),
 -- satellite_day_status.parquet when a release ships it (absent in v1-m2v-2026-11-14).
 CREATE TABLE method_meta (
     release_id     bigint NOT NULL,
     method_version text   NOT NULL,
-    meta           jsonb  NOT NULL,
+    meta           json   NOT NULL, -- json (not jsonb) keeps m2v_meta.json text and key order as-is
     aliases_used   jsonb  NOT NULL,
     warnings       jsonb  NOT NULL,
     files          jsonb  NOT NULL

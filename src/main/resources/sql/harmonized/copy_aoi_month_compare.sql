@@ -1,0 +1,1 @@
+COPY {child} (aoi_id, year, month, value, baseline_median, baseline_p25, baseline_p75, percentile, ratio_to_median, n_baseline_years, verdict, status, low_sample) FROM STDIN
