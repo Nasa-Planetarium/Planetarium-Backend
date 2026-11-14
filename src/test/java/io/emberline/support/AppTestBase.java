@@ -18,7 +18,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 /** Full application on random ports (public + management) over a fresh migrated database. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"management.server.port=0", "emberline.cors.allowed-origins=https://app.example"})
+        properties = {"management.server.port=0", "emberline.cors.allowed-origins=https://app.example",
+                "emberline.ratelimit.enabled=false"})
 public abstract class AppTestBase {
 
     protected static final JsonMapper JSON = JsonMapper.builder().build();

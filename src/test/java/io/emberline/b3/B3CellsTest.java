@@ -44,6 +44,25 @@ class B3CellsTest extends AppTestBase {
         root = ReleaseFixtures.newRoot();
         assertThat(IngestCli.run(jdbcUrl, root, "stage", "core").exit()).isZero();
         assertThat(IngestCli.run(jdbcUrl, root, "activate", "core", "--expect-sha256", Fixtures.coreManifestSha256()).exit()).isZero();
+        awaitRelease("core");
+    }
+
+    /** The app picks the switch up by polling (or the l1-refresh event); a cached test context may lag ≤ 10 s. */
+    void awaitRelease(String key) {
+        long deadline = System.nanoTime() + java.time.Duration.ofSeconds(30).toNanos();
+        while (System.nanoTime() < deadline) {
+            JsonNode release = json(get("/api/v1/version")).get("release");
+            if (release != null && !release.isNull() && release.get("release_key").asString().equals(key)) {
+                return;
+            }
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+        throw new AssertionError("release " + key + " not active in time");
     }
 
     /** cell_id → row of the fixture for one month whose center is inside the AOI boundary. */

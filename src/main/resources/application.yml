@@ -33,11 +33,12 @@ spring:
         schema: platform
         schema-initialization:
           enabled: false
-      republish-outstanding-events-on-restart: false
+      republish-outstanding-events-on-restart: true
   main:
     banner-mode: off
 server:
   port: 8080
+  forward-headers-strategy: none
   max-http-request-header-size: 8KB
   tomcat:
     max-http-form-post-size: 256KB
@@ -87,7 +88,29 @@ emberline:
     duckdb-threads: 4
   firms:
     wms-base-url: ${FIRMS_WMS_BASE_URL:}
-    map-key-file: ${FIRMS_MAP_KEY:}
+    map-key-file: ${FIRMS_MAP_KEY_FILE:}
+    timeout: 5s
+    cache-ttl: 900s
+    budget-capacity: 4500
+    budget-period: 10m
+    env: ${EMBERLINE_ENV:test}
+  events:
+    transport: redis
+    env: ${EMBERLINE_ENV:test}
+    durable-url: ${EMBERLINE_REDIS_DURABLE_URL:redis://localhost:6380}
+    reclaim-interval: 30s
+    min-idle: 60s
+    max-deliveries: 5
+  ratelimit:
+    trusted-proxies: ${EMBERLINE_TRUSTED_PROXIES:}
+    ip:
+      capacity: 100
+      refill-tokens: 50
+      refill-period: 1s
+    heavy:
+      capacity: 30
+      refill-tokens: 30
+      refill-period: 1m
 logging:
   pattern:
     correlation: "[%X{request_id:-}] "
@@ -98,6 +121,11 @@ spring:
       on-profile: flyway | ingest
   main:
     web-application-type: none
+  modulith:
+    events:
+      republish-outstanding-events-on-restart: false
 emberline:
   release:
     polling-enabled: false
+  events:
+    consumers-enabled: false
