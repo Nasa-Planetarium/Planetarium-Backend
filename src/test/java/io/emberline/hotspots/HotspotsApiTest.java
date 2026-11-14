@@ -50,7 +50,8 @@ import tools.jackson.databind.json.JsonMapper;
  * and 2001-04 = 2004-04 shifted with every row doubled (ties on the four public sort columns). Expected values come
  * from DuckDB over the parquet files (and core-v11 harmonized_cell_day), not from the code under test.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "management.server.port=0")
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {"management.server.port=0", "emberline.ratelimit.enabled=false"})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestPropertySource(properties = "emberline.release.poll-interval=1s")
