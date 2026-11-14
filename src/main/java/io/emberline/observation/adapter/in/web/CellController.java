@@ -21,7 +21,7 @@ class CellController {
         this.listCells = listCells;
     }
 
-    @GetMapping(path = "/cells", produces = GeoJson.MEDIA_TYPE)
+    @GetMapping(path = "/cells", produces = {GeoJson.MEDIA_TYPE, "application/json"})
     CellCollection cells(ReleaseRef release, @Valid @ParameterObject CellsRequest request) {
         return listCells.cells(release, request.toQuery());
     }

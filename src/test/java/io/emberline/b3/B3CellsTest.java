@@ -112,6 +112,15 @@ class B3CellsTest extends AppTestBase {
         HttpResponse<String> r = get("/api/v1/cells?aoi_id=KR&month=2025-03");
         assertThat(r.statusCode()).as(r.body()).isEqualTo(200);
         assertThat(r.headers().firstValue("Content-Type").orElse("")).startsWith("application/geo+json");
+        // F-406: Accept application/json gets the same GeoJSON body as application/json; geo+json stays the default
+        HttpResponse<String> asJson = get("/api/v1/cells?aoi_id=KR&month=2025-03", "Accept", "application/json");
+        assertThat(asJson.statusCode()).as(asJson.body()).isEqualTo(200);
+        assertThat(asJson.headers().firstValue("Content-Type").orElse("")).startsWith("application/json");
+        assertThat(asJson.body()).isEqualTo(r.body());
+        assertThat(get("/api/v1/cells?aoi_id=KR&month=2025-03&format=json").headers().firstValue("Content-Type").orElse(""))
+                .startsWith("application/json");
+        assertThat(get("/api/v1/cells?aoi_id=KR&month=2025-03", "Accept", "text/csv").statusCode()).isEqualTo(406);
+        assertThat(get("/api/v1/cells?aoi_id=KR&month=2025-03&format=xml").statusCode()).as("R-FMT1").isEqualTo(406);
         assertThat(r.headers().firstValue("X-Method-Version")).hasValue("v1-m2v-2026-11-14");
         JsonNode body = json(r);
         Map<Long, List<Object>> expected = expectedInside("KR", 2025, 3);

@@ -165,6 +165,7 @@ paths:
       operationId: getAoiBoundary
       summary: 지역 경계 (GeoJSON Feature)
       description: |
+        `application/geo+json` 이 기본; `Accept: application/json` 이면 같은 본문을 `Content-Type: application/json` 으로 (F-406).
         release `aoi_boundaries.geojson` 피처 5,038개. 경계 없는 AOI 13개(`WORLD`, `CONT_*` 8개, `ADM1_BRI-00`·`BRT-00`·`CNM-00`·`SPI-00`)는 404 `unknown_aoi` 가 아니라 200 + `geometry: null`.
       x-handoff-alias:
         path: /aoi
@@ -181,8 +182,13 @@ paths:
             application/geo+json:
               schema:
                 $ref: '#/components/schemas/BoundaryFeature'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoundaryFeature'
         '404':
           $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '503':
           $ref: '#/components/responses/Unavailable'
   /aois/{aoiId}/calendar:
@@ -548,6 +554,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '409':
           $ref: '#/components/responses/Conflict'
         '503':
@@ -563,6 +571,7 @@ paths:
         결측 달(2001-06)에는 칸 행이 있으면서 `value=null` (release 14,502행 — 핸드오프 「행 없으면 0」과 다른 모양, R6).
         칸 수 > 10,000 이거나 level world·continent 면 400 `range_too_large`(40103).
         칸 합 ≠ `aoi_month.value` (R13).
+        `application/geo+json` 이 기본; `Accept: application/json` 이면 같은 본문을 `Content-Type: application/json` 으로 (F-406).
       x-handoff-alias:
         path: /cells
         served_at: /api/cells
@@ -589,12 +598,17 @@ paths:
             application/geo+json:
               schema:
                 $ref: '#/components/schemas/CellCollection'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CellCollection'
         '304':
           $ref: '#/components/responses/NotModified'
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '503':
           $ref: '#/components/responses/Unavailable'
   /satellite-status:
