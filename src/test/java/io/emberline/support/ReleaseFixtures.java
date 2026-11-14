@@ -25,7 +25,9 @@ public final class ReleaseFixtures {
     /** A fresh release root with a copy of {@code core}. */
     public static Path newRoot() {
         try {
-            Path root = Files.createTempDirectory("emberline-releases");
+            // Own parent dir: tests that check "nothing written next to the root" walk root.getParent(),
+            // which must not be the shared /tmp (unreadable systemd-private entries, other processes' files).
+            Path root = Files.createDirectory(Files.createTempDirectory("emberline-releases").resolve("releases"));
             copyCore(root, "core");
             return root;
         } catch (IOException e) {
