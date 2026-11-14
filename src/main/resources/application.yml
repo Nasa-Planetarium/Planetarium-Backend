@@ -73,8 +73,6 @@ emberline:
     root: ${EMBERLINE_RELEASE_ROOT:}
     poll-interval: 10s
   limits:
-    hotspots-days-reference: 92
-    hotspots-days-all: 31
     hotspots-limit-max: 10000
     summary-day-days: 366
     summary-month-years: 40
@@ -125,7 +123,8 @@ emberline:
       refill-period: 1m
   hotspots:
     max-area-deg2: 100
-    max-days: 366
+    max-days-reference: 92
+    max-days-all: 31
 logging:
   pattern:
     correlation: "[%X{request_id:-}] "

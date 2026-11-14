@@ -489,8 +489,9 @@ paths:
       description: |
         점 = 활성 release 의 `harmonized_hotspots/{reference,other}/year=YYYY/month=MM/*.parquet`(release SHA256SUMS 밖, 따로 배포).
         그 폴더가 없으면 503 `data_not_loaded`(「준비 중」). 기간이 닿는 연·월 폴더만 읽는다. `layer=reference` = reference/, `all` = reference/ + other/.
-        **확대했을 때만 점**: bbox(또는 `aoi_id` 경계의 bbox) 넓이 ≤ 100 제곱도 그리고 기간 ≤ 366일
-        (`emberline.hotspots.max-area-deg2`·`max-days`). 넘으면 400 `range_too_large`(40101) — 넓은 범위는 칸(`/cells`).
+        **확대했을 때만 점**: bbox(또는 `aoi_id` 경계의 bbox) 넓이 ≤ 100 제곱도 그리고 기간 ≤ 92일(`layer=reference`)·31일(`layer=all`)
+        (`emberline.hotspots.max-area-deg2`·`max-days-reference`·`max-days-all`; `/version` `limits.hotspots_days_reference`·`hotspots_days_all` 이
+        같은 설정을 그대로 보인다). 넘으면 400 `range_too_large`(40101) — 넓은 범위는 칸(`/cells`).
         `aoi_id` 는 점 좌표가 AOI 경계 안(JTS contains, bbox 로 먼저 거름)인 점.
         합계는 `is_reference=true` 점만(`reference_sum`, `limit`·`cursor`·`layer` 와 무관). `layer=all` 은 지도 표시용.
         `reference_sum.note`: 점 합계에는 MODIS 시기 잔차(residual)가 없어 `/summary` 보다 작을 수 있다.

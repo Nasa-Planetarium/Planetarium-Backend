@@ -179,7 +179,7 @@ class HotspotsApiTest {
         // that do have reference points (68 keys in the fixture, all on day 1 — reported, not ours to fix).
         String cells = "(cell_id // 3600 - 900) BETWEEN 360 AND 379 AND (cell_id % 3600 - 1800) BETWEEN 1260 AND 1279";
         for (String[] range : List.of(new String[] {"2025-03-02", "2025-03-31"}, new String[] {"2004-03-01", "2004-04-30"},
-                new String[] {"2012-03-02", "2012-12-31"})) {
+                new String[] {"2012-03-02", "2012-06-01"})) { // ≤ 92 days (max-days-reference)
             List<Object> expected = Duck.query("SELECT sum(value), sum(value_lo), sum(value_hi), sum(n_points) FROM read_parquet(?) "
                     + "WHERE " + cells + " AND date_local BETWEEN ?::DATE AND ?::DATE", V11.resolve("harmonized_cell_day.parquet"),
                     range[0], range[1]).get(0);
@@ -216,9 +216,10 @@ class HotspotsApiTest {
     @Test
     @Order(5)
     void b3_cursorWalkReturnsEveryPointOnceInOrder() {
-        walk("bbox=" + KR_BBOX + "&start=2025-03-01&end=2025-04-30&layer=all", 97,
-                count("SELECT count(*) FROM read_parquet([?, ?, ?, ?])", files("reference", 2025, 3), files("reference", 2025, 4),
-                        files("other", 2025, 3), files("other", 2025, 4)));
+        // layer=all spans at most 31 days; this one still crosses a month folder boundary
+        walk("bbox=" + KR_BBOX + "&start=2025-03-16&end=2025-04-15&layer=all", 97,
+                count("SELECT count(*) FROM read_parquet([?, ?, ?, ?]) WHERE date_local BETWEEN DATE '2025-03-16' AND DATE '2025-04-15'",
+                        files("reference", 2025, 3), files("reference", 2025, 4), files("other", 2025, 3), files("other", 2025, 4)));
         // 2001-04: every row twice with the same (acq_datetime_utc, latitude, longitude, satellite) — pages split ties
         walk("bbox=" + KR_BBOX + "&start=2001-04-01&end=2001-04-30", 7, count("SELECT count(*) FROM read_parquet(?)", files("reference", 2001, 4)));
     }
@@ -258,12 +259,21 @@ class HotspotsApiTest {
         assertThat(json(area).get("error_no").asInt()).isEqualTo(40101);
         assertThat(json(area).get("param").asString()).isEqualTo("bbox");
         assertThat(json(area).get("detail").asString()).contains("/cells");
-        HttpResponse<String> span = get("/api/v1/hotspots?bbox=" + KR_BBOX + "&start=2024-01-01&end=2025-01-01");
-        assertThat(span.statusCode()).isEqualTo(400);
+        // spans per layer = /version limits (contract Version.limits 92 / 31, one setting emberline.hotspots.*)
+        JsonNode limits = json(get("/api/v1/version")).get("limits");
+        assertThat(limits.get("hotspots_days_reference").asInt()).isEqualTo(92);
+        assertThat(limits.get("hotspots_days_all").asInt()).isEqualTo(31);
+        HttpResponse<String> span = get("/api/v1/hotspots?bbox=" + KR_BBOX + "&start=2024-01-01&end=2024-04-02");
+        assertThat(span.statusCode()).as("93 days, layer=reference").isEqualTo(400);
         assertThat(json(span).get("error_no").asInt()).isEqualTo(40101);
         assertThat(json(span).get("param").asString()).isEqualTo("end");
-        assertThat(json(span).get("detail").asString()).contains("/cells");
-        assertThat(get("/api/v1/hotspots?bbox=" + KR_BBOX + "&start=2024-01-01&end=2024-12-31").statusCode()).isEqualTo(200);
+        assertThat(json(span).get("detail").asString()).contains("/cells").contains("92");
+        assertThat(get("/api/v1/hotspots?bbox=" + KR_BBOX + "&start=2024-01-01&end=2024-04-01&limit=1").statusCode()).as("92 days (2024 is a leap year)").isEqualTo(200);
+        HttpResponse<String> all = get("/api/v1/hotspots?bbox=" + KR_BBOX + "&start=2025-03-01&end=2025-04-01&layer=all");
+        assertThat(all.statusCode()).as("32 days, layer=all").isEqualTo(400);
+        assertThat(json(all).get("param").asString()).isEqualTo("end");
+        assertThat(json(all).get("detail").asString()).contains("31");
+        assertThat(get("/api/v1/hotspots?bbox=" + KR_BBOX + "&start=2025-03-01&end=2025-03-31&layer=all&limit=1").statusCode()).as("31 days").isEqualTo(200);
         assertThat(get("/api/v1/hotspots?bbox=120,30,130,40&start=2025-03-01&end=2025-03-31").statusCode()).isEqualTo(200);
         HttpResponse<String> japan = get("/api/v1/hotspots?aoi_id=ADM0_JPN&start=2025-03-01&end=2025-03-31");
         assertThat(json(japan).get("error_no").asInt()).isEqualTo(40101);

@@ -35,9 +35,9 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 /**
- * Points of the pinned release, only when zoomed in (area ≤ max-area-deg2, span ≤ max-days; otherwise 400 pointing to
- * the cell layer). reference_sum covers every matching reference point; the page follows the public order with a
- * keyset cursor.
+ * Points of the pinned release, only when zoomed in (area ≤ max-area-deg2, span ≤ max-days-reference or
+ * max-days-all by layer; otherwise 400 pointing to the cell layer). reference_sum covers every matching reference
+ * point; the page follows the public order with a keyset cursor.
  */
 @Service
 class HotspotQueryService implements ListHotspotsUseCase {
@@ -81,7 +81,7 @@ class HotspotQueryService implements ListHotspotsUseCase {
         Layer layer = Layer.ofCode(query.layer() == null ? "reference" : query.layer()).orElseThrow(() ->
                 new InvalidRequestException(ErrorCode.INVALID_PARAM, "layer", "layer must be reference or all"));
         Area area = hasBbox ? new Area(bbox(query.bbox()), Optional.empty(), "bbox") : aoi(release, query.aoiId());
-        requireZoomedIn(area, start, end);
+        requireZoomedIn(area, start, end, layer);
 
         List<Path> files = port.files(release.releaseKey(), layer, YearMonth.from(start), YearMonth.from(end))
                 .orElseThrow(() -> new DataUnavailableException(ErrorCode.DATA_NOT_LOADED, NOT_READY));
@@ -103,11 +103,12 @@ class HotspotQueryService implements ListHotspotsUseCase {
                 query.limit(), items.size(), totals.total(), truncated, next, Units.UNIT, sum, items, release.methodVersion());
     }
 
-    private void requireZoomedIn(Area area, LocalDate start, LocalDate end) {
+    private void requireZoomedIn(Area area, LocalDate start, LocalDate end, Layer layer) {
         long days = ChronoUnit.DAYS.between(start, end) + 1;
-        if (days > settings.maxDays()) {
+        int maxDays = settings.maxDays(layer);
+        if (days > maxDays) {
             throw new InvalidRequestException(ErrorCode.OBSERVATION_RANGE_TOO_LARGE, "end",
-                    "점은 기간 " + settings.maxDays() + "일 이하에서만 냅니다(요청 " + days + "일). "
+                    "점은 layer=" + layer.code() + " 에서 기간 " + maxDays + "일 이하에서만 냅니다(요청 " + days + "일). "
                             + "넓은 범위는 칸 지도(/cells)를 쓰세요.");
         }
         double deg2 = area.bbox().areaDeg2();
