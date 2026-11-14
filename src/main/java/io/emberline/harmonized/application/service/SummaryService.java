@@ -38,8 +38,10 @@ import org.springframework.stereotype.Service;
  * AOI summary (ruling R-SP1, team api_contract.md):
  * <ul>
  * <li>freq=month: a month wholly inside [start, end] is the aoi_month row as stored (value already = Σ cell value +
- * Σ residual_month). A month the range cuts is Σ harmonized_cell_day of the AOI's cells over the included days plus
- * residual_month × included_days / days_in_month ({@code residual_prorated: true}).</li>
+ * Σ residual_month). Whole means the range excludes no data day: it covers the first day through as_of_date, or
+ * through the last day when as_of_date is null or after it (R-SP3). A month the range cuts is Σ harmonized_cell_day
+ * of the AOI's cells over the included days plus residual_month × included_days / days_in_month
+ * ({@code residual_prorated: true}).</li>
  * <li>freq=day: Σ cell_day.value per date (residual never added to a day) plus {@code month_residual} per month
  * touched; the range total adds the (pro-rated) residual.</li>
  * <li>Month in progress (status partial): month-to-date value, value_projected / as_of_date passed through, no
@@ -101,8 +103,8 @@ class SummaryService implements GetSummaryUseCase {
         for (YearMonth ym = YearMonth.from(q.start()); !ym.isAfter(YearMonth.from(q.end())); ym = ym.plusMonths(1)) {
             LocalDate from = max(q.start(), ym.atDay(1));
             LocalDate to = min(q.end(), ym.atEndOfMonth());
-            boolean whole = from.equals(ym.atDay(1)) && to.equals(ym.atEndOfMonth());
             Optional<MonthRecord> row = bundle.at(ym.getYear(), ym.getMonthValue());
+            boolean whole = from.equals(ym.atDay(1)) && !to.isBefore(lastDataDay(ym, row));
             if (row.isEmpty()) {
                 series.add(monthPoint(ym, Reading.outOfRange(), null, null, "aoi_month", whole ? null : false));
             } else if (whole) {
@@ -114,6 +116,16 @@ class SummaryService implements GetSummaryUseCase {
         }
         return new SummaryResponse(area.aoiId, q.start(), q.end(), "month", Units.UNIT, series, null,
                 total(series, null), release.methodVersion());
+    }
+
+    /**
+     * The last day of the month that has data (R-SP3): its as_of_date when that falls inside the month (month to date),
+     * else its last calendar day. A range from the first day through this day excludes no data day, so the month is
+     * whole and served as the aoi_month row.
+     */
+    static LocalDate lastDataDay(YearMonth ym, Optional<MonthRecord> row) {
+        LocalDate asOf = row.map(MonthRecord::asOfDate).orElse(null);
+        return asOf != null && YearMonth.from(asOf).equals(ym) ? asOf : ym.atEndOfMonth();
     }
 
     /** A month the range cuts: Σ cell_day over the included days + the month residual pro rata. */
