@@ -1039,6 +1039,10 @@ components:
         값의 출처. 달 단위 경계(release 실측): terra 2000-11~2002-06 · modis_m2v 2002-07~**2012-01** · snpp 2012-02~2026-10 · n20_bridge 2026-11(NOAA-20 × 1.013, 핸드오프 §3).
         `n21_bridge`(NOAA-20 결측일 × 1.053)는 release 0행이지만 핸드오프 코드값이라 계약에 남긴다.
         v0 이름(`modis_harmonized`, `noaa20_bridged`, `modis_harmonized_terra_only`)은 적재기만 받고 응답에는 안 나온다.
+        `harmonized_cell_day.parquet` 전용 코드(R-VS1, 적재기가 이 파일에서만 받는다; aoi_month·cell_month 값에는 없다):
+        `modis_m2v_background` — 배경 예측 운반 행(MODIS 기간 감지 없는 칸의 m2v 예측; 값 0·n_points 0, 1일 행의 residual_month에만 실림, summary month_residual.by_type 키로만 나온다);
+        `modis_fallback_m2v_predicted` — NOAA-20·NOAA-21을 쓸 수 없는 NRT 날의 MODIS 대체(MODIS 점 × m2v 예측 배율; v1.1 실파일 156행, 모두 2026-11-14).
+      x-cell-day-only: [modis_m2v_background, modis_fallback_m2v_predicted]
       x-release-rows:
         harmonized_cell_month: {modis_m2v: 25124932, snpp_observed: 22517158, modis_m2v_terra: 3828671, n20_bridge: 91881, n21_bridge: 0}
         aoi_month: {snpp_observed: 894027, modis_m2v: 580865, modis_m2v_terra: 101020, n20_bridge: 5051, n21_bridge: 0}
