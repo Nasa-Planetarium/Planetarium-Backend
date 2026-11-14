@@ -18,7 +18,7 @@ info:
     - 응답 필드 이름 = 핸드오프 열 이름(snake_case). release 에서 이름이 다른 열은 `x-release-column` 에 적었다(적재기가 번역).
     - 숫자는 파일 값 그대로 낸다(A1 「모델 따른다」). verdict·percentile 을 다시 계산하지 않는다.
     - `x-status: assumed` = release 에 없어서 가정으로 둔 모양. `x-status: release-absent` = 이 release 로는 503.
-    - 예시 숫자는 release 실값(aibox 시제품 서버가 release 를 읽어 2026-11-14 19:12 KST 에 낸 응답에서 옮김). 점(`/hotspots`)·위성 상태는 release 에 없어 가짜 예시이며 그렇게 표시했다.
+    - 예시 숫자는 release 실값(aibox 시제품 서버가 release 를 읽어 2026-11-14 19:12 KST 에 낸 응답에서 옮김). 위성 상태는 release 에 없어 가짜 예시이며 그렇게 표시했다. 점(`/hotspots`) 예시는 v1.1 점 파일(KR fixture) 실값.
 
     알려진 결함·열린 것: `contract/ASSUMPTIONS.md`, `CONFLICTS.md`. 대응표: `contract/MAPPING.md`.
   license:
@@ -487,10 +487,16 @@ paths:
       operationId: listHotspots
       summary: 통합 핫스팟 점
       description: |
-        `harmonized_hotspots/` 는 release 에 없다(R2) → 지금은 503 `data_not_loaded`.
-        합계는 `is_reference=true` 점만(`reference_sum`, `limit` 와 무관). `layer=all` 은 지도 표시용.
+        점 = 활성 release 의 `harmonized_hotspots/{reference,other}/year=YYYY/month=MM/*.parquet`(release SHA256SUMS 밖, 따로 배포).
+        그 폴더가 없으면 503 `data_not_loaded`(「준비 중」). 기간이 닿는 연·월 폴더만 읽는다. `layer=reference` = reference/, `all` = reference/ + other/.
+        **확대했을 때만 점**: bbox(또는 `aoi_id` 경계의 bbox) 넓이 ≤ 100 제곱도 그리고 기간 ≤ 366일
+        (`emberline.hotspots.max-area-deg2`·`max-days`). 넘으면 400 `range_too_large`(40101) — 넓은 범위는 칸(`/cells`).
+        `aoi_id` 는 점 좌표가 AOI 경계 안(JTS contains, bbox 로 먼저 거름)인 점.
+        합계는 `is_reference=true` 점만(`reference_sum`, `limit`·`cursor`·`layer` 와 무관). `layer=all` 은 지도 표시용.
+        `reference_sum.note`: 점 합계에는 MODIS 시기 잔차(residual)가 없어 `/summary` 보다 작을 수 있다.
+        정렬 `acq_datetime_utc, latitude, longitude, satellite`, keyset `cursor`(다른 선택의 커서는 400, 다른 판의 커서는 409).
+        CSV(`Accept: text/csv` 또는 `format=csv`) = 그 쪽(page)의 점, JSON 항목과 같은 19열.
         날짜는 `date_local`(현지 태양시) 기준.
-      x-status: release-absent
       x-handoff-alias:
         path: /hotspots
         served_at: /api/hotspots
@@ -536,7 +542,7 @@ paths:
             text/csv:
               schema:
                 type: string
-                x-csv-columns: [latitude, longitude, acq_datetime_utc, date_local, satellite, instrument, frp, confidence, daynight, cell_id, country, adm1, harmonized_weight, weight_lo, weight_hi, weight_source, is_reference, source, method_version]
+                x-csv-columns: [latitude, longitude, acq_datetime_utc, date_local, satellite, instrument, frp, confidence, daynight, cell_id, adm0_a3, adm1_code, harmonized_weight, weight_lo, weight_hi, weight_source, is_reference, source, method_version]
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -756,7 +762,7 @@ components:
     AoiIdQuery:
       name: aoi_id
       in: query
-      description: '`bbox` 와 정확히 하나(둘 다·둘 다 없음 → 400 invalid_param). 점은 그 점의 cell_id 가 AOI 칸인지로 거른다(G5).'
+      description: '`bbox` 와 정확히 하나(둘 다·둘 다 없음 → 400 invalid_param). 점(`/hotspots`)은 점 좌표가 AOI 경계 안인지로 거른다(B3 판정 3, G5 대체).'
       schema:
         $ref: '#/components/schemas/AoiId'
     Bbox:
@@ -1278,9 +1284,10 @@ components:
     Hotspot:
       type: object
       additionalProperties: false
-      description: 핸드오프 §1-1 열 19개, 같은 순서. release 에 점 파일이 없다(R2). HotspotList 예시는 가짜 생성기 값(API-v3 §3.2).
-      x-status: release-absent
-      required: [latitude, longitude, acq_datetime_utc, date_local, satellite, instrument, frp, confidence, daynight, cell_id, country, adm1, harmonized_weight, weight_lo, weight_hi, weight_source, is_reference, source, method_version]
+      description: |
+        점 파일 열 19개, 같은 순서. 이름은 실제 파일이 정본(E1): 핸드오프 §1-1 의 `country`·`adm1` 대신 `adm0_a3`·`adm1_code`.
+        `weight_lo`·`weight_hi` 는 Terra 만 있던 2000-11~2002-06 과 other 층에서 null. HotspotList 예시는 실제 점(v1.1 release 의 KR 부분 fixture).
+      required: [latitude, longitude, acq_datetime_utc, date_local, satellite, instrument, frp, confidence, daynight, cell_id, adm0_a3, adm1_code, harmonized_weight, weight_lo, weight_hi, weight_source, is_reference, source, method_version]
       properties:
         latitude: {type: number, minimum: -90, maximum: 90}
         longitude: {type: number, minimum: -180, maximum: 180}
@@ -1292,8 +1299,8 @@ components:
         confidence: {type: string, enum: [l, n, h]}
         daynight: {type: string, enum: [D, N]}
         cell_id: {$ref: '#/components/schemas/CellId'}
-        country: {type: [string, 'null'], description: ISO3 (가정 G9)}
-        adm1: {type: [string, 'null']}
+        adm0_a3: {type: [string, 'null'], description: 'Natural Earth ADM0_A3 (예 KOR, PRK, JPN)'}
+        adm1_code: {type: [string, 'null'], description: 'Natural Earth adm1_code (예 KOR-2509). aoi_id 가 아님'}
         harmonized_weight: {type: number, minimum: 0}
         weight_lo: {type: [number, 'null'], minimum: 0}
         weight_hi: {type: [number, 'null'], minimum: 0}
@@ -1323,25 +1330,28 @@ components:
           properties:
             value: {type: number}
             value_lo: {type: [number, 'null']}
-            value_hi: {type: [number, 'null']}
+            value_hi: {type: [number, 'null'], description: 조건에 맞는 기준 점 중 하나라도 경계가 null 이면 null}
             n_points: {type: integer}
+            note: {type: string, description: 화면 안내 — 점 합계에는 MODIS 시기 잔차가 없어 /summary 보다 작을 수 있다}
         hotspots:
           type: array
           items: {$ref: '#/components/schemas/Hotspot'}
         method_version: {$ref: '#/components/schemas/MethodVersion'}
       examples:
-        - start: '2025-03-22'
-          end: '2025-03-23'
+        - start: '2025-03-25'
+          end: '2025-03-26'
           aoi_id: SGG_47170
           layer: reference
           limit: 1
           count: 1
-          total: 9
+          total: 411
           truncated: true
-          reference_sum: {value: 9.0, value_lo: 9.0, value_hi: 9.0, n_points: 9}
+          next_cursor: aDF8Y29yZSM0ODQ4ODc2ODZkZWN8Yjg3ZTUzOWIwMzY4fDE3NDI4MzgzMDAwMDAwMDB8MzYuMzk4MjR8MTI4Ljg1MjgxfE58MQ
+          unit: VIIRS(S-NPP) 기준 화재 감지량
+          reference_sum: {value: 411.0, value_lo: 411.0, value_hi: 411.0, n_points: 411, note: '점 합계에는 MODIS 시기(2000-11~2012-01) 잔차(residual)가 들어 있지 않아 같은 지역·기간의 /summary 값보다 작을 수 있습니다.'}
           hotspots:
-            - {latitude: 36.6536, longitude: 128.61977, acq_datetime_utc: '2025-03-21T16:43:00Z', date_local: '2025-03-22', satellite: N, instrument: VIIRS, frp: 0.9, confidence: n, daynight: N, cell_id: 4560686, country: KOR, adm1: SIDO_47, harmonized_weight: 1.0, weight_lo: 1.0, weight_hi: 1.0, weight_source: snpp_observed, is_reference: true, source: SP, method_version: v1-m2v-fake-2026-11-14}
-          method_version: v1-m2v-fake-2026-11-14
+            - {latitude: 36.39824, longitude: 128.85281, acq_datetime_utc: '2025-03-24T17:45:00Z', date_local: '2025-03-25', satellite: N, instrument: VIIRS, frp: 1.18, confidence: n, daynight: N, cell_id: 4549888, adm0_a3: KOR, adm1_code: KOR-2509, harmonized_weight: 1.0, weight_lo: 1.0, weight_hi: 1.0, weight_source: snpp_observed, is_reference: true, source: SP, method_version: v1-m2v-2026-11-14}
+          method_version: v1-m2v-2026-11-14
     CellId:
       type: integer
       minimum: 0
