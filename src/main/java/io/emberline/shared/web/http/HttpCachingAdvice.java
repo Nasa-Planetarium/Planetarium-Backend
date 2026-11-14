@@ -49,7 +49,7 @@ public class HttpCachingAdvice implements ResponseBodyAdvice<Object> {
     public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType,
                                   Class<? extends HttpMessageConverter<?>> selectedConverterType,
                                   ServerHttpRequest request, ServerHttpResponse response) {
-        if (body instanceof Problem || !(request instanceof ServletServerHttpRequest servletRequest)
+        if (body instanceof byte[] || body instanceof Problem || !(request instanceof ServletServerHttpRequest servletRequest)
                 || !(response instanceof ServletServerHttpResponse servletResponse)) {
             return body;
         }
