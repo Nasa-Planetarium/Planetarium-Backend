@@ -1,0 +1,78 @@
+# App + one-shot release load. __IMAGE__ is replaced at deploy time (planetarium-backend:<sha8>, imported into k3s).
+# Secrets pl-db (username, password) and pl-firms (key) are created out of band and never printed.
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: pl-app-env, namespace: planetarium}
+data:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://pl-postgres:5432/emberline
+  EMBERLINE_RELEASE_ROOT: /release
+  EMBERLINE_REDIS_CACHE_URL: redis://pl-redis-cache:6379
+  EMBERLINE_REDIS_DURABLE_URL: redis://pl-redis-durable:6379
+  FIRMS_WMS_BASE_URL: https://firms.modaps.eosdis.nasa.gov
+  FIRMS_MAP_KEY_FILE: /run/secrets/firms/key
+  EMBERLINE_CORS_ALLOWED_ORIGINS: http://192.168.0.10:18490
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: pl-app, namespace: planetarium}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: pl-app}}
+  template:
+    metadata: {labels: {app: pl-app}}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, fsGroup: 10001}
+      containers:
+        - name: app
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          envFrom: [{configMapRef: {name: pl-app-env}}]
+          env:
+            - {name: SPRING_DATASOURCE_USERNAME, valueFrom: {secretKeyRef: {name: pl-db, key: username}}}
+            - {name: SPRING_DATASOURCE_PASSWORD, valueFrom: {secretKeyRef: {name: pl-db, key: password}}}
+          ports: [{containerPort: 8080}, {containerPort: 8081}]
+          readinessProbe: {httpGet: {path: /actuator/health, port: 8081}, periodSeconds: 5, failureThreshold: 60}
+          resources: {requests: {cpu: "500m", memory: 1Gi}, limits: {cpu: "4", memory: 3Gi}}
+          volumeMounts:
+            - {name: release, mountPath: /release, readOnly: true}
+            - {name: firms, mountPath: /run/secrets/firms, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: release, persistentVolumeClaim: {claimName: release, readOnly: true}}
+        - {name: firms, secret: {secretName: pl-firms, optional: true}}
+        - {name: tmp, emptyDir: {sizeLimit: 4Gi}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: pl-load-__RELEASE_SLUG__, namespace: planetarium}
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, fsGroup: 10001}
+      containers:
+        - name: load
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          envFrom: [{configMapRef: {name: pl-app-env}}]
+          env:
+            - {name: SPRING_DATASOURCE_USERNAME, valueFrom: {secretKeyRef: {name: pl-db, key: username}}}
+            - {name: SPRING_DATASOURCE_PASSWORD, valueFrom: {secretKeyRef: {name: pl-db, key: password}}}
+            - {name: RELEASE_KEY, value: __RELEASE_KEY__}
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              set -e;
+              java -XX:MaxRAMPercentage=70 -jar /app/emberline.jar --spring.profiles.active=flyway;
+              java -XX:MaxRAMPercentage=70 -jar /app/emberline.jar --spring.profiles.active=ingest stage "$RELEASE_KEY";
+              SUM=$(sha256sum "/release/$RELEASE_KEY/SHA256SUMS" | cut -d' ' -f1);
+              java -XX:MaxRAMPercentage=70 -jar /app/emberline.jar --spring.profiles.active=ingest activate "$RELEASE_KEY" --expect-sha256 "$SUM"
+          resources: {requests: {cpu: "2", memory: 2Gi}, limits: {cpu: "8", memory: 4Gi}}
+          volumeMounts:
+            - {name: release, mountPath: /release, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: release, persistentVolumeClaim: {claimName: release, readOnly: true}}
+        - {name: tmp, emptyDir: {sizeLimit: 8Gi}}
