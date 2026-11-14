@@ -1383,7 +1383,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/Interval'
         - $ref: '#/components/schemas/EventColumns'
-      required: [cell_id, value, value_lo, value_hi, raw_modis, raw_viirs, value_source, data_source, status]
+      required: [cell_id, value, value_lo, value_hi, raw_modis, raw_viirs, value_source, data_source, status, interval_out_of_range, interval_unavailable]
       properties:
         cell_id: {$ref: '#/components/schemas/CellId'}
         cell_lat: {type: number, description: 칸 중심 위도(정본은 싣는다; 시제품 v3 는 geometry 로만)}
@@ -1393,6 +1393,16 @@ components:
         value_source: {$ref: '#/components/schemas/ValueSource'}
         data_source: {$ref: '#/components/schemas/DataSource'}
         status: {$ref: '#/components/schemas/MonthStatus'}
+        interval_out_of_range:
+          type: boolean
+          description: |
+            읽기 경로 표시(E3): `value` 가 [`value_lo`, `value_hi`] 밖이다(release 칸 표 441,269행, 전부 modis_m2v).
+            값은 파일 그대로 두고 이 칸의 구간은 쓰지 않는다(그리지 않음·자르지 않음). 그 밖에는 false.
+        interval_unavailable:
+          type: boolean
+          description: |
+            읽기 경로 표시: 이 칸에 구간이 없다 — `value_lo`·`value_hi` 가 null(Terra 단독 2000-11~2002-06, meta `cell_interval`)
+            이거나 결측 달(status missing, `value` 도 null). 그 기간 구간은 AOI 단위(`aoi_month`)로만. 그 밖에는 false.
     CellFeature:
       type: object
       additionalProperties: false

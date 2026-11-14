@@ -3,6 +3,7 @@ package io.emberline.b3;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.emberline.support.AppTestBase;
+import io.emberline.support.Contract;
 import io.emberline.support.Duck;
 import io.emberline.support.Fixtures;
 import io.emberline.support.IngestCli;
@@ -271,6 +272,49 @@ class B3CellsTest extends AppTestBase {
         assertThat(body.get("features").size()).isEqualTo(1);
         assertThat(body.get("features").get(0).get("id").asLong()).isEqualTo(id);
         return body.get("features").get(0);
+    }
+
+    @Test
+    @Order(9)
+    @SuppressWarnings("unchecked")
+    void cellPropertiesAreTheContractSchemaIncludingTheIntervalFlags() {
+        Map<String, Object> schema = Contract.at("components", "schemas", "CellProperties");
+        java.util.Set<String> declared = new java.util.TreeSet<>(((Map<String, Object>) schema.get("properties")).keySet());
+        for (String part : List.of("Interval", "EventColumns")) {
+            declared.addAll(((Map<String, Object>) Contract.at("components", "schemas", part).get("properties")).keySet());
+        }
+        List<String> required = (List<String>) schema.get("required");
+        assertThat(required).contains("interval_out_of_range", "interval_unavailable");
+        Map<String, Object> props = (Map<String, Object>) schema.get("properties");
+        for (String flag : List.of("interval_out_of_range", "interval_unavailable")) {
+            assertThat(((Map<String, Object>) props.get(flag)).get("type")).as(flag).isEqualTo("boolean");
+            assertThat((String) ((Map<String, Object>) props.get(flag)).get("description")).as(flag).isNotBlank();
+        }
+        // around a fixture cell of each case: value outside its interval, no interval (Terra), missing month
+        java.util.Set<String> flagged = new java.util.TreeSet<>();
+        for (String where : List.of("value > value_hi OR value < value_lo", "value IS NOT NULL AND value_lo IS NULL", "value IS NULL")) {
+            List<Object> row = Duck.query("SELECT cell_id, year, month FROM read_parquet(?) WHERE " + where
+                    + " ORDER BY year, month, cell_id LIMIT 1", Duck.core("harmonized_cell_month.parquet")).get(0);
+            long id = ((Number) row.get(0)).longValue();
+            double lat = (id / 3600 - 900) / 10.0 + 0.05;
+            double lon = (id % 3600 - 1800) / 10.0 + 0.05;
+            String q = String.format(java.util.Locale.ROOT, "bbox=%.2f,%.2f,%.2f,%.2f&month=%04d-%02d", lon - 2, lat - 2, lon + 2, lat + 2,
+                    ((Number) row.get(1)).intValue(), ((Number) row.get(2)).intValue());
+            for (JsonNode f : json(get("/api/v1/cells?" + q)).get("features")) {
+                JsonNode p = f.get("properties");
+                java.util.Set<String> served = new java.util.TreeSet<>();
+                p.properties().forEach(e -> served.add(e.getKey()));
+                assertThat(declared).as(q + " cell " + p.get("cell_id")).containsAll(served);
+                assertThat(served).containsAll(required);
+                for (String flag : List.of("interval_out_of_range", "interval_unavailable")) {
+                    assertThat(p.get(flag).isBoolean()).isTrue();
+                    if (p.get(flag).asBoolean()) {
+                        flagged.add(flag);
+                    }
+                }
+            }
+        }
+        assertThat(flagged).as("both flags occur in the fixture").containsExactly("interval_out_of_range", "interval_unavailable");
     }
 
     @Test
