@@ -20,7 +20,14 @@ public class HandoffAliasTable {
         this(List.of(
                 new SamePathAlias("/api/aoi", "/api/v1/aois"),
                 new SamePathAlias("/api/method", "/api/v1/methods/current"),
-                new SamePathAlias("/api/status", "/api/v1/satellite-status")));
+                new SamePathAlias("/api/status", "/api/v1/satellite-status"),
+                new PathParamAlias("/api/calendar", "/api/v1/aois/{aoi_id}/calendar", List.of("aoi_id")),
+                new YearMonthPathAlias("/api/compare", "/api/v1/aois/{aoi_id}/months/{year_month}/comparison", List.of("aoi_id", "year_month")),
+                new PathParamAlias("/api/summary", "/api/v1/aois/{aoi_id}/summary", List.of("aoi_id")),
+                new ParamDispatchAlias("/api/export.csv", "type", Map.of(
+                        "calendar", new PathParamAlias("/api/export.csv", "/api/v1/aois/{aoi_id}/calendar", List.of("aoi_id")),
+                        "summary", new PathParamAlias("/api/export.csv", "/api/v1/aois/{aoi_id}/summary", List.of("aoi_id"))),
+                        Map.of("format", "csv"))));
     }
 
     public HandoffAliasTable(List<HandoffAliasRule> rules) {
