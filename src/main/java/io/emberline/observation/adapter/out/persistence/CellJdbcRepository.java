@@ -8,6 +8,7 @@ import io.emberline.shared.error.ErrorCode;
 import io.emberline.shared.sql.SqlResource;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -45,7 +46,8 @@ class CellJdbcRepository implements CellReadPort {
                 rs.getObject("value", Double.class), rs.getObject("value_lo", Double.class),
                 rs.getObject("value_hi", Double.class), rs.getObject("raw_modis", Integer.class),
                 rs.getObject("raw_viirs", Integer.class), rs.getString("value_source"), rs.getString("data_source"),
-                rs.getString("status"));
+                rs.getString("status"), rs.getObject("value_projected", Double.class),
+                rs.getObject("as_of_date", LocalDate.class));
     }
 
     private static <T> T translate(Supplier<T> query) {

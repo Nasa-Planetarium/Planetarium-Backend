@@ -2,6 +2,7 @@ package io.emberline.observation.application.port.in;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.emberline.shared.json.GeoJson;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -27,11 +28,14 @@ public record CellCollection(String type, Properties properties, List<Feature> f
     /**
      * Columns of harmonized_cell_month as the file has them, plus the read-path flags (E3): interval_out_of_range
      * when value lies outside [value_lo, value_hi], interval_unavailable when the row has no interval. The eight
-     * fire-event columns are not in the release and are null.
+     * fire-event columns are not in the release and are null. value_projected and as_of_date (contract §진행 중인 달)
+     * appear only on status = partial cells of a release that has them; otherwise the keys are absent.
      */
     public record CellProperties(long cellId, double cellLat, double cellLon, Double value, Double valueLo,
                                  Double valueHi, Integer rawModis, Integer rawViirs, String valueSource,
-                                 String dataSource, String status, boolean intervalOutOfRange,
+                                 String dataSource, String status,
+                                 @JsonInclude(JsonInclude.Include.NON_NULL) Double valueProjected,
+                                 @JsonInclude(JsonInclude.Include.NON_NULL) LocalDate asOfDate, boolean intervalOutOfRange,
                                  boolean intervalUnavailable, Integer nEventsViirs, Double eventAreaMaxKm2Viirs,
                                  Integer eventDaysMaxViirs, Double eventAreaShareMaxViirs, Integer nEventsModis,
                                  Double eventAreaMaxKm2Modis, Integer eventDaysMaxModis, Double eventAreaShareMaxModis) {
