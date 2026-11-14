@@ -151,6 +151,8 @@ class ObservationReleaseLoader implements ReleaseLoader {
             ps.setString(1, file);
             ps.setInt(2, range[0]);
             ps.setInt(3, range[1]);
+            ps.setInt(4, range[0] / 100);
+            ps.setInt(5, range[1] / 100);
             try (ResultSet r = ps.executeQuery()) {
                 return partitions.copy(T_CELLS, id, copy, new CopyInputStream(r, (row, line) -> line
                         .integer(row.getLong(1), false)

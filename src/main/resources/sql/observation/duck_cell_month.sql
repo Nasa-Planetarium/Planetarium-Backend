@@ -6,4 +6,6 @@ SELECT CAST({cell_id} AS BIGINT) AS cell_id, CAST({value} AS DOUBLE) AS value, C
        CAST({value_source} AS VARCHAR) AS value_source, CAST({data_source} AS VARCHAR) AS data_source,
        CAST({status} AS VARCHAR) AS status
 FROM read_parquet(?)
+-- the plain year range lets DuckDB skip row groups by their min/max statistics
 WHERE CAST({year} AS INTEGER) * 100 + CAST({month} AS INTEGER) BETWEEN ? AND ?
+  AND {year} BETWEEN ? AND ?

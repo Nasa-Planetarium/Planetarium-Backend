@@ -120,6 +120,12 @@ class B1ApiTest extends AppTestBase {
         assertThat(doubles(kr.get("bbox"))).containsExactly(124.614, 33.198, 130.921, 38.624);
         assertThat(fieldNames(kr)).containsExactlyInAnyOrder("aoi_id", "name_ko", "name_en", "level", "parent_id",
                 "n_cells", "hidden", "has_data", "first_month", "last_month", "bbox");
+        long hiddenCountries = Duck.query("SELECT count(*) FROM read_parquet(?) WHERE level = 'country' AND hidden",
+                Duck.core("aoi_list.parquet")).get(0).get(0) instanceof Number n ? n.longValue() : -1;
+        JsonNode withHidden = json(get("/api/v1/aois?level=country&include_hidden=true&limit=1000"));
+        assertThat(withHidden.get("count").asInt()).isEqualTo(expected.size() + (int) hiddenCountries);
+        assertThat(json(get("/api/v1/aois?q=" + "x".repeat(101))).get("param").asString()).isEqualTo("q");
+        assertThat(json(get("/api/v1/aois?level=planet")).get("param").asString()).isEqualTo("level");
         JsonNode noData = find(all, "ADM0_ABW");
         assertThat(noData.get("has_data").asBoolean()).isFalse();
         assertThat(noData.get("first_month").isNull()).isTrue();
