@@ -15,7 +15,7 @@ Status column: **served** = implemented in `HandoffAliasTable` now (B1); later p
 | `/api/export.csv` | `/export.csv` | `GET getAoiSummary` (CSV) | `/api/v1/aois/{aoiId}/summary` + `Accept: text/csv` | `type` → summary | later packet |
 | `/api/summary` | `/summary` | `GET getBboxSummary` | `/api/v1/summaries` | `bbox` → bbox; `start` → start; `end` → end; `freq` → freq | later packet |
 | `/api/summary` | `/summary` | `POST querySummaryByPolygon` | `/api/v1/summary-queries` | `polygon` → body.polygon (별칭 GET 은 쿼리 문자열, URL 8 KB 안에서); `start` → body.start; `end` → body.end; `freq` → body.freq | later packet |
-| `/api/hotspots` | `/hotspots` | `GET listHotspots` | `/api/v1/hotspots` | `bbox` → bbox; `aoi_id` → aoi_id; `start` → start; `end` → end; `layer` → layer; `limit` → limit | later packet |
+| `/api/hotspots` | `/hotspots` | `GET listHotspots` | `/api/v1/hotspots` | `bbox` → bbox; `aoi_id` → aoi_id; `start` → start; `end` → end; `layer` → layer; `limit` → limit | served |
 | `/api/export.csv` | `/export.csv` | `GET listHotspots` (CSV) | `/api/v1/hotspots` + `Accept: text/csv` | `type` → hotspots | later packet |
 | `/api/cells` | `/cells` | `GET listCells` | `/api/v1/cells` | `aoi_id` → aoi_id; `bbox` → bbox; `year` → month 의 YYYY; `month` → month 의 MM | later packet |
 | `/api/status` | `/status` | `GET getSatelliteStatus` | `/api/v1/satellite-status` | `start` → start; `end` → end | served |

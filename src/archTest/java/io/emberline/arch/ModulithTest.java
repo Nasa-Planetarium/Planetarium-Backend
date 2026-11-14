@@ -20,6 +20,6 @@ class ModulithTest {
         MODULES.verify();
         Set<String> names = MODULES.stream().map(m -> m.getIdentifier().toString()).collect(Collectors.toSet());
         assertThat(names).containsExactlyInAnyOrder("catalog", "harmonized", "observation", "provenance", "ingest",
-                "external", "platform", "identity", "reporting", "audit", "operations");
+                "external", "platform", "identity", "reporting", "audit", "operations", "hotspots");
     }
 }

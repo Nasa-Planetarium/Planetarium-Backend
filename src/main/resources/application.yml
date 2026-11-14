@@ -111,6 +111,9 @@ emberline:
       capacity: 30
       refill-tokens: 30
       refill-period: 1m
+  hotspots:
+    max-area-deg2: 100
+    max-days: 366
 logging:
   pattern:
     correlation: "[%X{request_id:-}] "
