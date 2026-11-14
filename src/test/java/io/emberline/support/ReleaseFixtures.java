@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.stream.Stream;
@@ -54,10 +53,7 @@ public final class ReleaseFixtures {
         try {
             Files.move(original, tmp);
             try (Connection c = DriverManager.getConnection("jdbc:duckdb:")) {
-                try (PreparedStatement ps = c.prepareStatement("CREATE VIEW src AS SELECT * FROM read_parquet(?)")) {
-                    ps.setString(1, tmp.toString());
-                    ps.execute();
-                }
+                c.createStatement().execute("CREATE TABLE src AS SELECT * FROM read_parquet('" + tmp.toString().replace("'", "''") + "')");
                 c.createStatement().execute("COPY (" + selectOverSrc + ") TO '" + original.toString().replace("'", "''")
                         + "' (FORMAT parquet)");
             }

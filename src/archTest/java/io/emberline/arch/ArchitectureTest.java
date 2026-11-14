@@ -28,7 +28,7 @@ class ArchitectureTest {
                 .should().onlyDependOnClassesThat().resideInAnyPackage(
                         "..application.port.in..", "..adapter.in.web.dto..", "..adapter.in.web", "io.emberline.shared..",
                         "java..", "org.springframework.web.bind.annotation..", "org.springframework.http..",
-                        "org.springframework.validation.annotation..", "jakarta.validation..")
+                        "org.springframework.validation.annotation..", "jakarta.validation..", "org.springdoc.core.annotations..")
                 .check(MAIN);
         noClasses().that().resideInAPackage("..adapter.in.web..").and().areAnnotatedWith(RestController.class)
                 .should().dependOnClassesThat().areAssignableTo(ResponseEntity.class)
