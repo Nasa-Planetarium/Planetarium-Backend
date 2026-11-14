@@ -20,7 +20,10 @@ public class HandoffAliasTable {
         this(List.of(
                 new SamePathAlias("/api/aoi", "/api/v1/aois"),
                 new SamePathAlias("/api/method", "/api/v1/methods/current"),
-                new SamePathAlias("/api/status", "/api/v1/satellite-status")));
+                new SamePathAlias("/api/status", "/api/v1/satellite-status"),
+                new YearMonthAlias("/api/cells", "/api/v1/cells"),
+                new SamePathAlias("/api/hotspots", "/api/v1/hotspots"),
+                new SamePathAlias("/api/firms/wms", "/api/v1/firms/wms-tiles")));
     }
 
     public HandoffAliasTable(List<HandoffAliasRule> rules) {
