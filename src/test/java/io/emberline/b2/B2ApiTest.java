@@ -691,6 +691,76 @@ class B2ApiTest extends B2AppBase {
         assertThat(cut.get("flags").toString()).contains("partial_range");
     }
 
+    /** The /cells feature property keys before pl-fix2, in order (a complete month must keep exactly these). */
+    static final List<String> CELL_KEYS = List.of("cell_id", "cell_lat", "cell_lon", "value", "value_lo", "value_hi",
+            "raw_modis", "raw_viirs", "value_source", "data_source", "status", "interval_out_of_range", "interval_unavailable",
+            "n_events_viirs", "event_area_max_km2_viirs", "event_days_max_viirs", "event_area_share_max_viirs",
+            "n_events_modis", "event_area_max_km2_modis", "event_days_max_modis", "event_area_share_max_modis");
+
+    @Test
+    @Order(23)
+    void fix2_partialCellCarriesValueProjectedAndAsOfDate() throws Exception {
+        // the real v1.1 cell file has value_projected but no as_of_date: the loader takes the partial month's as_of_date
+        // from aoi_month.parquet
+        List<String> cellColumns = Duck.query("SELECT column_name FROM (DESCRIBE SELECT * FROM read_parquet(?))",
+                V11.resolve("harmonized_cell_month.parquet")).stream().map(r -> (String) r.get(0)).toList();
+        assertThat(cellColumns).contains("value_projected").doesNotContain("as_of_date");
+        String asOf = (String) Duck.query("SELECT CAST(max(as_of_date) AS VARCHAR) FROM read_parquet(?) WHERE status = 'partial' "
+                + "AND year = 2026 AND month = 11", V11.resolve("aoi_month.parquet")).get(0).get(0);
+        assertThat(asOf).isEqualTo("2026-11-13");
+        java.util.Map<Long, Double> projected = new java.util.HashMap<>();
+        for (List<Object> r : Duck.query("SELECT cell_id::BIGINT, value_projected FROM read_parquet(?) WHERE year = 2026 AND month = 11 "
+                + "AND status = 'partial'", V11.resolve("harmonized_cell_month.parquet"))) {
+            projected.put(((Number) r.get(0)).longValue(), ((Number) r.get(1)).doubleValue());
+        }
+        JsonNode fc = ok("/api/v1/cells?aoi_id=KR&month=2026-11");
+        assertThat(fc.get("properties").get("month_status").asString()).isEqualTo("partial");
+        assertThat(fc.get("features").size()).isPositive();
+        for (JsonNode f : fc.get("features")) {
+            JsonNode p = f.get("properties");
+            assertThat(p.get("status").asString()).isEqualTo("partial");
+            assertThat(p.get("value_projected").doubleValue()).as("cell %d", f.get("id").asLong())
+                    .isEqualTo(projected.get(f.get("id").asLong()));
+            assertThat(p.get("as_of_date").asString()).isEqualTo(asOf);
+            List<String> keys = new ArrayList<>();
+            p.properties().forEach(e -> keys.add(e.getKey()));
+            List<String> expected = new ArrayList<>(CELL_KEYS);
+            expected.addAll(expected.indexOf("status") + 1, List.of("value_projected", "as_of_date"));
+            assertThat(keys).containsExactlyElementsOf(expected);
+        }
+        // stored for partial rows only
+        try (java.sql.Connection c = java.sql.DriverManager.getConnection(jdbcUrl, "postgres", "");
+             java.sql.Statement st = c.createStatement()) {
+            java.sql.ResultSet rs = st.executeQuery("SELECT count(*) FILTER (WHERE value_projected IS NOT NULL), "
+                    + "count(*) FILTER (WHERE as_of_date = DATE '2026-11-13'), count(*) FILTER (WHERE status <> 'partial' "
+                    + "AND (value_projected IS NOT NULL OR as_of_date IS NOT NULL)) FROM observation.cell_month "
+                    + "WHERE release_id = (SELECT release_id FROM ingest.active_release WHERE id = 1)");
+            rs.next();
+            assertThat(rs.getLong(1)).isEqualTo(projected.size()).isEqualTo(22);
+            assertThat(rs.getLong(2)).isEqualTo(22);
+            assertThat(rs.getLong(3)).isZero();
+        }
+    }
+
+    @Test
+    @Order(24)
+    void fix2_completeMonthCellsHaveNeitherField() {
+        for (String month : List.of("2025-03", "2026-09", "2001-06")) { // ok, nrt, missing
+            HttpResponse<String> r = get("/api/v1/cells?aoi_id=KR&month=" + month);
+            assertThat(r.statusCode()).isEqualTo(200);
+            assertThat(r.body()).as(month).doesNotContain("value_projected").doesNotContain("as_of_date");
+            JsonNode fc = json(r);
+            if (!month.equals("2001-06")) {
+                assertThat(fc.get("features").size()).as(month).isPositive();
+            }
+            for (JsonNode f : fc.get("features")) {
+                List<String> keys = new ArrayList<>();
+                f.get("properties").properties().forEach(e -> keys.add(e.getKey()));
+                assertThat(keys).as(month).containsExactlyElementsOf(CELL_KEYS);
+            }
+        }
+    }
+
     @Test
     @Order(30)
     void b2_17_releaseSwitchUsesANewKeyWithTheNewDataVersion() throws Exception {

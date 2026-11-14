@@ -14,10 +14,15 @@ interface CellCaseHandler {
 
     CellProperties properties(CellRow row);
 
-    /** Properties with the file's values (A1) and the given flags; event columns are not in the release. */
+    /**
+     * Properties with the file's values (A1) and the given flags; event columns are not in the release.
+     * value_projected / as_of_date only on partial rows (absent, not null, on every other row).
+     */
     static CellProperties of(CellRow r, boolean outOfRange, boolean unavailable) {
+        boolean partial = r.partial();
         return new CellProperties(r.cellId(), asWritten(r.cellLat()), asWritten(r.cellLon()), r.value(), r.valueLo(), r.valueHi(), r.rawModis(),
-                r.rawViirs(), r.valueSource(), r.dataSource(), r.status(), outOfRange, unavailable,
+                r.rawViirs(), r.valueSource(), r.dataSource(), r.status(), partial ? r.valueProjected() : null,
+                partial ? r.asOfDate() : null, outOfRange, unavailable,
                 null, null, null, null, null, null, null, null);
     }
 

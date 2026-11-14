@@ -1,5 +1,6 @@
 package io.emberline.observation.adapter.out.persistence;
 
+import io.emberline.observation.domain.CellRow;
 import io.emberline.shared.release.load.CodeValues;
 import io.emberline.shared.release.load.ColumnKind;
 import io.emberline.shared.release.load.ColumnSpec;
@@ -20,6 +21,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,13 +36,17 @@ import org.springframework.stereotype.Component;
 /**
  * {@code observation.cell_month} from harmonized_cell_month.parquet (51.5M rows in v1-m2v-2026-11-14): streamed with
  * DuckDB read_parquet → PostgreSQL COPY in parallel month ranges (one DuckDB instance, one PG connection per worker),
- * indexes after the COPY. method_version is checked equal to m2v_meta.json and not repeated per row.
+ * indexes after the COPY. method_version is checked equal to m2v_meta.json and not repeated per row. The v1.1 columns
+ * value_projected and as_of_date are optional and kept for status = partial rows only (a complete month's
+ * value_projected equals value); a cell file without as_of_date takes the partial month's as_of_date from
+ * aoi_month.parquet.
  */
 @Component
 class ObservationReleaseLoader implements ReleaseLoader {
 
     static final String CELLS = "harmonized_cell_month.parquet";
     static final String T_CELLS = "observation.cell_month";
+    static final String AOI_MONTH = "aoi_month.parquet";
     private static final Logger log = LoggerFactory.getLogger(ObservationReleaseLoader.class);
 
     static final List<ColumnSpec> COLUMNS = List.of(
@@ -57,7 +63,15 @@ class ObservationReleaseLoader implements ReleaseLoader {
             ColumnSpec.required("value_source", ColumnKind.TEXT),
             ColumnSpec.required("data_source", ColumnKind.TEXT, "source_flag"),
             ColumnSpec.required("status", ColumnKind.TEXT),
-            ColumnSpec.required("method_version", ColumnKind.TEXT, "model_version"));
+            ColumnSpec.required("method_version", ColumnKind.TEXT, "model_version"),
+            ColumnSpec.optional("value_projected", ColumnKind.NUMBER),
+            ColumnSpec.optional("as_of_date", ColumnKind.DATE));
+    /** aoi_month.parquet columns read for the as_of_date of partial months (validated by the harmonized loader). */
+    static final List<ColumnSpec> AS_OF_COLUMNS = List.of(
+            ColumnSpec.required("year", ColumnKind.INTEGER),
+            ColumnSpec.required("month", ColumnKind.INTEGER),
+            ColumnSpec.required("status", ColumnKind.TEXT),
+            ColumnSpec.optional("as_of_date", ColumnKind.DATE));
 
     private final DuckDb duckDb;
     private final Partitions partitions;
@@ -114,6 +128,7 @@ class ObservationReleaseLoader implements ReleaseLoader {
         try (Connection duck = duckDb.open()) {
             ParquetColumns c = ParquetColumns.inspect(duck, file, CELLS, COLUMNS, new ValidationReport());
             List<int[]> ranges = ranges(duck, file, c, duckDb.copyWorkers());
+            Map<Integer, String> asOf = c.has("as_of_date") ? Map.of() : partialAsOf(duck, source);
             partitions.create(T_CELLS, id);
             String select = c.render(SqlResource.text("observation/duck_cell_month.sql"));
             String copy = SqlResource.text("observation/copy_cell_month.sql");
@@ -123,7 +138,7 @@ class ObservationReleaseLoader implements ReleaseLoader {
                 List<Future<Long>> parts = new ArrayList<>();
                 for (int[] range : ranges) {
                     Connection worker = ((DuckDBConnection) duck).duplicate();
-                    parts.add(pool.submit(() -> copyRange(worker, select, copy, file, id, range)));
+                    parts.add(pool.submit(() -> copyRange(worker, select, copy, file, id, range, asOf)));
                 }
                 for (Future<Long> part : parts) {
                     total += part.get();
@@ -146,7 +161,8 @@ class ObservationReleaseLoader implements ReleaseLoader {
         }
     }
 
-    private long copyRange(Connection worker, String select, String copy, String file, long id, int[] range) throws SQLException {
+    private long copyRange(Connection worker, String select, String copy, String file, long id, int[] range,
+                           Map<Integer, String> partialAsOf) throws SQLException {
         try (worker; PreparedStatement ps = worker.prepareStatement(select)) {
             ps.setString(1, file);
             ps.setInt(2, range[0]);
@@ -160,9 +176,34 @@ class ObservationReleaseLoader implements ReleaseLoader {
                         .real(row.getFloat(5), false).real(row.getFloat(6), false)
                         .integer(row.getInt(7), row.wasNull()).integer(row.getInt(8), row.wasNull())
                         .integer(row.getInt(9), false).integer(row.getInt(10), false)
-                        .text(CodeValues.valueSource(row.getString(11))).text(row.getString(12)).text(row.getString(13))));
+                        .text(CodeValues.valueSource(row.getString(11))).text(row.getString(12)).text(row.getString(13))
+                        .num(row.getDouble(14), row.wasNull() || !CellRow.PARTIAL.equals(row.getString(13)))
+                        .text(CellRow.PARTIAL.equals(row.getString(13)) ? asOf(row.getString(15), partialAsOf, row.getInt(9), row.getInt(10)) : null)));
             }
         }
+    }
+
+    private static String asOf(String fromFile, Map<Integer, String> partialAsOf, int year, int month) {
+        return fromFile != null ? fromFile : partialAsOf.get(year * 100 + month);
+    }
+
+    /** YYYYMM → as_of_date of the partial months of aoi_month.parquet; empty when that file has no as_of_date. */
+    static Map<Integer, String> partialAsOf(Connection duck, ReleaseSource source) throws SQLException {
+        String file = source.file(AOI_MONTH).toString();
+        ParquetColumns m = ParquetColumns.inspect(duck, file, AOI_MONTH, AS_OF_COLUMNS, new ValidationReport());
+        if (!m.ok() || !m.has("as_of_date")) {
+            return Map.of();
+        }
+        Map<Integer, String> out = new HashMap<>();
+        try (PreparedStatement ps = duck.prepareStatement(m.render(SqlResource.text("observation/duck_partial_as_of.sql")))) {
+            ps.setString(1, file);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    out.put(rs.getInt(1), rs.getString(2));
+                }
+            }
+        }
+        return Map.copyOf(out);
     }
 
     /** Contiguous YYYYMM ranges with about the same number of rows each. */

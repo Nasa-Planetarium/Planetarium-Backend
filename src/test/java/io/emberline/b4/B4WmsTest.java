@@ -71,6 +71,10 @@ class B4WmsTest extends AppTestBase {
         r.add("emberline.ratelimit.heavy.capacity", () -> "12");
         r.add("emberline.ratelimit.heavy.refill-tokens", () -> "1");
         r.add("emberline.ratelimit.heavy.refill-period", () -> "1h");
+        // pl-fix2: the tile routes are limited by scope tiles, no longer heavy
+        r.add("emberline.ratelimit.tiles.capacity", () -> "12");
+        r.add("emberline.ratelimit.tiles.refill-tokens", () -> "1");
+        r.add("emberline.ratelimit.tiles.refill-period", () -> "1h");
     }
 
     static Path keyFile() {

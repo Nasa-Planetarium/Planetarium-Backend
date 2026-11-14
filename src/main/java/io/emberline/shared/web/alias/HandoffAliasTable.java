@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * contract/handoff-aliases.md as code. Each later packet adds its rows here (B2: /api/calendar, /api/compare,
- * /api/summary, /api/export.csv; B3: /api/hotspots, /api/cells; B4: /api/firms/wms) — no alias controllers.
+ * /api/summary, /api/export.csv type=calendar|summary, type=hotspots since pl-fix2; B3: /api/hotspots, /api/cells; B4: /api/firms/wms) — no alias controllers.
  */
 @Component
 public class HandoffAliasTable {
@@ -29,7 +29,8 @@ public class HandoffAliasTable {
                 new PathParamAlias("/api/summary", "/api/v1/aois/{aoi_id}/summary", List.of("aoi_id")),
                 new ParamDispatchAlias("/api/export.csv", "type", Map.of(
                         "calendar", new PathParamAlias("/api/export.csv", "/api/v1/aois/{aoi_id}/calendar", List.of("aoi_id")),
-                        "summary", new PathParamAlias("/api/export.csv", "/api/v1/aois/{aoi_id}/summary", List.of("aoi_id"))),
+                        "summary", new PathParamAlias("/api/export.csv", "/api/v1/aois/{aoi_id}/summary", List.of("aoi_id")),
+                        "hotspots", new PathParamAlias("/api/export.csv", "/api/v1/hotspots", List.of())),
                         Map.of("format", "csv"))));
     }
 

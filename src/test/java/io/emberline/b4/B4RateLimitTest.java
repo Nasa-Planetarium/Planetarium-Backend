@@ -98,7 +98,7 @@ class B4RateLimitTest extends AppTestBase {
     @Test
     @Order(3)
     void b4_03_trustedProxyIpv6ClientsFoldToTheirSlash64() {
-        ClientKeyResolver resolver = new ClientKeyResolver(new RateLimitProperties(true, null, null, null,
+        ClientKeyResolver resolver = new ClientKeyResolver(new RateLimitProperties(true, null, null, null, null, null,
                 List.of("10.9.9.9", "fd00::/8"), null));
         String a = resolver.subject(fromProxy("2001:db8::1"));
         String b = resolver.subject(fromProxy("2001:db8::ffff"));

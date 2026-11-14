@@ -21,12 +21,17 @@ import org.springframework.stereotype.Component;
 
 /**
  * text/csv for GET /api/v1/hotspots: the points of the page, same 19 columns and order as the JSON items (contract
- * x-csv-columns), RFC 4180 quoting, empty cell for null, plus a download file name.
+ * x-csv-columns), RFC 4180 quoting, empty cell for null, plus a download file name. The JSON page fields that are not
+ * point columns travel as headers: {@code X-Truncated} (= {@code truncated}), {@code X-Total-Count} (= {@code total})
+ * and, when more points follow, {@code X-Next-Cursor} (= {@code next_cursor}).
  */
 @Component
 class HotspotCsvConverter extends AbstractHttpMessageConverter<HotspotListResponse> {
 
     static final MediaType TEXT_CSV = new MediaType("text", "csv", StandardCharsets.UTF_8);
+    static final String TRUNCATED = "X-Truncated";
+    static final String TOTAL_COUNT = "X-Total-Count";
+    static final String NEXT_CURSOR = "X-Next-Cursor";
 
     /** Column name → cell text, in contract order. */
     static final List<Column> COLUMNS = List.of(
@@ -75,6 +80,11 @@ class HotspotCsvConverter extends AbstractHttpMessageConverter<HotspotListRespon
     @Override
     protected void writeInternal(HotspotListResponse body, HttpOutputMessage outputMessage) throws IOException {
         outputMessage.getHeaders().setContentDisposition(ContentDisposition.attachment().filename(fileName(body)).build());
+        outputMessage.getHeaders().set(TRUNCATED, Boolean.toString(body.truncated()));
+        outputMessage.getHeaders().set(TOTAL_COUNT, Long.toString(body.total()));
+        if (body.nextCursor() != null) {
+            outputMessage.getHeaders().set(NEXT_CURSOR, body.nextCursor());
+        }
         Writer w = new OutputStreamWriter(outputMessage.getBody(), StandardCharsets.UTF_8);
         w.write(COLUMNS.stream().map(Column::name).collect(Collectors.joining(",")));
         w.write("\r\n");

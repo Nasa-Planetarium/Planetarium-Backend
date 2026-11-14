@@ -356,4 +356,26 @@ class B3CellsTest extends AppTestBase {
         assertThat(get("/api/v1/aois/KR").statusCode()).isEqualTo(200);
         assertThat(get("/api/v1/cells?aoi_id=SIDO_47&month=2025-03").statusCode()).isEqualTo(200);
     }
+
+    @Test
+    @Order(10)
+    void fix2_releaseWithoutProjectionColumnsLoadsAndCellsOmitBoth() {
+        // v1 fixture core: neither the cell file nor aoi_month has value_projected / as_of_date, yet 2026-11 is partial
+        for (String file : List.of("harmonized_cell_month.parquet", "aoi_month.parquet")) {
+            List<String> columns = Duck.query("SELECT column_name FROM (DESCRIBE SELECT * FROM read_parquet(?))", Duck.core(file))
+                    .stream().map(r -> (String) r.get(0)).toList();
+            assertThat(columns).as(file).doesNotContain("value_projected", "as_of_date");
+        }
+        HttpResponse<String> r = get("/api/v1/cells?aoi_id=KR&month=2026-11");
+        assertThat(r.statusCode()).as(r.body()).isEqualTo(200);
+        JsonNode fc = json(r);
+        assertThat(fc.get("properties").get("month_status").asString()).isEqualTo("partial");
+        assertThat(fc.get("features").size()).isPositive();
+        for (JsonNode f : fc.get("features")) {
+            assertThat(f.get("properties").get("status").asString()).isEqualTo("partial");
+            assertThat(f.get("properties").has("value_projected")).isFalse();
+            assertThat(f.get("properties").has("as_of_date")).isFalse();
+        }
+        assertThat(r.body()).doesNotContain("value_projected").doesNotContain("as_of_date");
+    }
 }

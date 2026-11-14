@@ -503,6 +503,9 @@ paths:
         `reference_sum.note`: 점 합계에는 MODIS 시기 잔차(residual)가 없어 `/summary` 보다 작을 수 있다.
         정렬 `acq_datetime_utc, latitude, longitude, satellite`, keyset `cursor`(다른 선택의 커서는 400, 다른 판의 커서는 409).
         CSV(`Accept: text/csv` 또는 `format=csv`) = 그 쪽(page)의 점, JSON 항목과 같은 19열.
+        CSV 에 없는 JSON 쪽 필드는 헤더로: `X-Truncated`(= `truncated`, true/false), `X-Total-Count`(= `total`),
+        더 남았으면 `X-Next-Cursor`(= `next_cursor`, 다음 쪽은 같은 질의 + `cursor`). CORS 로도 노출한다.
+        핸드오프 `/export.csv?type=hotspots`(= `/api/export.csv?type=hotspots&…`)는 같은 파라미터로 이 경로의 CSV 를 준다(pl-fix2).
         날짜는 `date_local`(현지 태양시) 기준.
       x-handoff-alias:
         path: /hotspots
@@ -517,7 +520,9 @@ paths:
         csv_alias:
           path: /export.csv
           served_at: /api/export.csv
-          params: {type: hotspots}
+          params: {type: hotspots, bbox: bbox, aoi_id: aoi_id, start: start, end: end, layer: layer, limit: limit, cursor: cursor}
+          headers: [X-Truncated, X-Total-Count, X-Next-Cursor]
+          unknown_type: 404 not_found (모르는·빠진 `type`, 다른 export 행과 같음)
       parameters:
         - $ref: '#/components/parameters/Bbox'
         - $ref: '#/components/parameters/AoiIdQuery'
@@ -572,6 +577,8 @@ paths:
         칸 수 > 10,000 이거나 level world·continent 면 400 `range_too_large`(40103).
         칸 합 ≠ `aoi_month.value` (R13).
         `application/geo+json` 이 기본; `Accept: application/json` 이면 같은 본문을 `Content-Type: application/json` 으로 (F-406).
+        진행 중인 달(`status: partial`) 칸에만 `value_projected`·`as_of_date` 가 붙는다(contract §진행 중인 달). 완료 달 칸·그 열이
+        없는 release 에는 키가 없다(null 을 싣지 않음).
       x-handoff-alias:
         path: /cells
         served_at: /api/cells
@@ -726,6 +733,8 @@ paths:
               schema: {type: string, contentMediaType: image/png}
         '400':
           $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '502':
           $ref: '#/components/responses/BadGateway'
         '503':
@@ -971,7 +980,13 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
     TooManyRequests:
-      description: 레이트 리밋
+      description: |
+        레이트 리밋 (클라이언트 IP 별 토큰 통, `emberline.ratelimit.*`). `detail` 이 다 쓴 범위(scope)를 이름으로 적는다
+        (`… (rate limit scope heavy); retry after N s`).
+        - `ip`: 모든 /api 요청 1 — 기본 처음 100, 초당 50 채움.
+        - `heavy`: `/cells`·`/hotspots`(+별칭) 1 — 기본 분당 30.
+        - `tiles`: `/firms/wms-tiles`·`/api/firms/wms` 1 — 기본 분당 240(지도 한 번 이동·확대 = 타일 12–20장). 상류 FIRMS 키는
+          따로 `emberline.firms.budget-*` 예산(기본 10분에 4500, 캐시 미스만).
       headers:
         Retry-After:
           $ref: '#/components/headers/RetryAfter'
@@ -1393,6 +1408,18 @@ components:
         value_source: {$ref: '#/components/schemas/ValueSource'}
         data_source: {$ref: '#/components/schemas/DataSource'}
         status: {$ref: '#/components/schemas/MonthStatus'}
+        value_projected:
+          type: number
+          description: |
+            진행 중인 달(contract §진행 중인 달): 그 칸의 달 전체 추정값(`harmonized_cell_month.value_projected` 그대로).
+            `status = partial` 인 칸에만 있다 — 완료 달·v1.1 열이 없는 release 에는 키 자체가 없다(null 을 싣지 않음).
+            `value` 는 그 달 `as_of_date` 까지의 값(month-to-date).
+        as_of_date:
+          type: string
+          format: date
+          description: |
+            진행 중인 달의 마지막 자료일. `status = partial` 인 칸에만 있다. 칸 파일에 `as_of_date` 열이 없으면(v1.1 실파일)
+            같은 달 `aoi_month.parquet` partial 행의 `as_of_date` 를 적재 때 넣는다. 그 열도 없는 release 에는 키가 없다.
         interval_out_of_range:
           type: boolean
           description: |
