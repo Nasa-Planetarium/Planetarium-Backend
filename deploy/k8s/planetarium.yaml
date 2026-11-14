@@ -1,0 +1,169 @@
+# EMBERLINE (planetarium-backend) on aibox K3s. Owner-applied; the app image tag is replaced at deploy time.
+# Secret pl-db (keys: username, password) is created out of band and never printed.
+apiVersion: v1
+kind: Namespace
+metadata: {name: planetarium}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: planetarium-release}
+spec:
+  capacity: {storage: 2Gi}
+  accessModes: [ReadOnlyMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: planetarium-static
+  hostPath: {path: /home/trevi/planetarium/release, type: Directory}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: release, namespace: planetarium}
+spec:
+  accessModes: [ReadOnlyMany]
+  storageClassName: planetarium-static
+  volumeName: planetarium-release
+  resources: {requests: {storage: 2Gi}}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: planetarium-www}
+spec:
+  capacity: {storage: 2Gi}
+  accessModes: [ReadOnlyMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: planetarium-static
+  hostPath: {path: /home/trevi/planetarium/www, type: Directory}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: www, namespace: planetarium}
+spec:
+  accessModes: [ReadOnlyMany]
+  storageClassName: planetarium-static
+  volumeName: planetarium-www
+  resources: {requests: {storage: 2Gi}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: pl-postgres, namespace: planetarium}
+spec:
+  serviceName: pl-postgres
+  replicas: 1
+  selector: {matchLabels: {app: pl-postgres}}
+  template:
+    metadata: {labels: {app: pl-postgres}}
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:18.6-trixie
+          imagePullPolicy: IfNotPresent
+          args: ["-c", "shared_buffers=1GB", "-c", "maintenance_work_mem=1GB", "-c", "max_wal_size=8GB", "-c", "work_mem=64MB"]
+          env:
+            - {name: POSTGRES_DB, value: emberline}
+            - {name: POSTGRES_USER, valueFrom: {secretKeyRef: {name: pl-db, key: username}}}
+            - {name: POSTGRES_PASSWORD, valueFrom: {secretKeyRef: {name: pl-db, key: password}}}
+            - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+          ports: [{containerPort: 5432}]
+          readinessProbe: {exec: {command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d emberline"]}, periodSeconds: 5}
+          resources: {requests: {cpu: "500m", memory: 2Gi}, limits: {cpu: "6", memory: 6Gi}}
+          volumeMounts: [{name: data, mountPath: /var/lib/postgresql/data}]
+  volumeClaimTemplates:
+    - metadata: {name: data}
+      spec: {accessModes: [ReadWriteOnce], storageClassName: local-path, resources: {requests: {storage: 40Gi}}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: pl-postgres, namespace: planetarium}
+spec: {selector: {app: pl-postgres}, ports: [{port: 5432, targetPort: 5432}]}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: pl-redis-cache, namespace: planetarium}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: pl-redis-cache}}
+  template:
+    metadata: {labels: {app: pl-redis-cache}}
+    spec:
+      containers:
+        - name: redis
+          image: redis:8-alpine
+          imagePullPolicy: IfNotPresent
+          args: ["--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+          ports: [{containerPort: 6379}]
+          resources: {limits: {memory: 384Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: pl-redis-cache, namespace: planetarium}
+spec: {selector: {app: pl-redis-cache}, ports: [{port: 6379}]}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: pl-redis-durable, namespace: planetarium}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: pl-redis-durable}}
+  template:
+    metadata: {labels: {app: pl-redis-durable}}
+    spec:
+      containers:
+        - name: redis
+          image: redis:8-alpine
+          imagePullPolicy: IfNotPresent
+          args: ["--maxmemory", "256mb", "--maxmemory-policy", "noeviction", "--appendonly", "yes", "--dir", "/data"]
+          ports: [{containerPort: 6379}]
+          resources: {limits: {memory: 384Mi}}
+          volumeMounts: [{name: data, mountPath: /data}]
+      volumes: [{name: data, emptyDir: {}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: pl-redis-durable, namespace: planetarium}
+spec: {selector: {app: pl-redis-durable}, ports: [{port: 6379}]}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: pl-web-conf, namespace: planetarium}
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      root /usr/share/nginx/html/current;
+      client_max_body_size 256k;
+      location /api/ { proxy_pass http://pl-app:8080; proxy_set_header X-Forwarded-For $remote_addr; proxy_read_timeout 60s; }
+      location /v3/api-docs { proxy_pass http://pl-app:8080; }
+      location /swagger-ui { proxy_pass http://pl-app:8080; }
+      location / { try_files $uri $uri.html $uri/ /index.html; }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: pl-web, namespace: planetarium}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: pl-web}}
+  template:
+    metadata: {labels: {app: pl-web}}
+    spec:
+      containers:
+        - name: nginx
+          image: nginxinc/nginx-unprivileged:1.29-alpine
+          imagePullPolicy: IfNotPresent
+          ports: [{containerPort: 8080}]
+          resources: {limits: {memory: 128Mi}}
+          volumeMounts:
+            - {name: conf, mountPath: /etc/nginx/conf.d}
+            - {name: www, mountPath: /usr/share/nginx/html, readOnly: true}
+      volumes:
+        - {name: conf, configMap: {name: pl-web-conf}}
+        - {name: www, persistentVolumeClaim: {claimName: www, readOnly: true}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: pl-web, namespace: planetarium}
+spec: {selector: {app: pl-web}, ports: [{port: 8080, targetPort: 8080}]}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: pl-app, namespace: planetarium}
+spec: {selector: {app: pl-app}, ports: [{name: http, port: 8080, targetPort: 8080}, {name: mgmt, port: 8081, targetPort: 8081}]}
