@@ -369,7 +369,8 @@ class HotspotsApiTest {
             assertThat(Double.parseDouble(cells[0])).isEqualTo(h.get("latitude").asDouble());
             assertThat(cells[10]).isEqualTo(h.get("adm0_a3").asString());
         }
-        assertThat(get("/api/v1/hotspots?" + q + "&format=xml").statusCode()).isEqualTo(400);
+        // R-FMT1: one negotiation path (HarmonizedWebConfig favorParameter "format"), an unknown format is 406 API-wide.
+        assertThat(get("/api/v1/hotspots?" + q + "&format=xml").statusCode()).isEqualTo(406);
     }
 
     @Test

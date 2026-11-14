@@ -25,7 +25,8 @@ import tools.jackson.databind.json.JsonMapper;
  * staged. (Not a subclass of AppTestBase: its dynamic emberline.release.root would be registered last and win.)
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"management.server.port=0", "emberline.cors.allowed-origins=https://app.example"})
+        properties = {"management.server.port=0", "emberline.cors.allowed-origins=https://app.example",
+                "emberline.ratelimit.enabled=false"})
 abstract class B2AppBase {
 
     protected static final JsonMapper JSON = JsonMapper.builder().build();

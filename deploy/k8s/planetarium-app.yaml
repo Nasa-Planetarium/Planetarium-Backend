@@ -34,7 +34,7 @@ spec:
             - {name: SPRING_DATASOURCE_PASSWORD, valueFrom: {secretKeyRef: {name: pl-db, key: password}}}
           ports: [{containerPort: 8080}, {containerPort: 8081}]
           readinessProbe: {httpGet: {path: /actuator/health, port: 8081}, periodSeconds: 5, failureThreshold: 60}
-          resources: {requests: {cpu: "500m", memory: 1Gi}, limits: {cpu: "4", memory: 3Gi}}
+          resources: {requests: {cpu: "500m", memory: 1Gi}, limits: {cpu: "4", memory: 4Gi}}
           volumeMounts:
             - {name: release, mountPath: /release, readOnly: true}
             - {name: firms, mountPath: /run/secrets/firms, readOnly: true}
