@@ -14,4 +14,4 @@ One handler class per case, chosen by `io.emberline.harmonized.domain.cases.Read
 | `LOW_SAMPLE` | `LowSampleHandler` | [low_sample.md](low_sample.md) |
 
 Not a handler (no row to handle): a month or day without a release row is served as `status: out_of_range` with
-every value null. The split day key of `harmonized_cell_day` is a query rule: [cell_day_split_key.md](cell_day_split_key.md).
+every value null. B2 deviations and data findings: [deviations-b2.md](deviations-b2.md). The split day key of `harmonized_cell_day` is a query rule: [cell_day_split_key.md](cell_day_split_key.md).

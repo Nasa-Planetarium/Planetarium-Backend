@@ -172,6 +172,8 @@ class B2ApiTest extends B2AppBase {
         assertThat(body.get("start_year").asInt()).isEqualTo(2024);
         assertThat(body.get("end_year").asInt()).isEqualTo(2025);
         assertThat(body.get("event_columns").isEmpty()).isTrue();
+        assertThat(body.properties().stream().map(java.util.Map.Entry::getKey).toList())
+                .containsExactly("aoi_id", "method_version", "unit", "start_year", "end_year", "event_columns", "months");
         assertCalendarMatches(body, V11, true, "KR", 2024, 2025);
         JsonNode mar = body.get("months").get(12 + 2);
         assertThat(mar.get("value").doubleValue()).isEqualTo(2764.0);
