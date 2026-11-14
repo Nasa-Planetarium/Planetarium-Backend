@@ -100,7 +100,7 @@ class StreamConsumers implements SmartLifecycle {
             lag.put(h.name(), value);
             Gauge.builder("emberline.events.lag", value, AtomicLong::get).tag("stream", stream).tag("group", h.name()).register(meters);
         });
-        Gauge.builder("emberline.dlq.size", dlqSize, AtomicLong::get).tag("stream", stream).register(meters);
+        Gauge.builder("emberline.dlq.size", dlqSize, AtomicLong::get).tag("stream", properties.releaseDlq()).register(meters);
         scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "emberline-stream-consumers");
             t.setDaemon(true);
