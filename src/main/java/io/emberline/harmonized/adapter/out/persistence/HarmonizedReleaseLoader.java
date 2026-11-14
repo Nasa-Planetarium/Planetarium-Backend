@@ -44,9 +44,14 @@ class HarmonizedReleaseLoader implements ReleaseLoader {
     public static final String CELL_DAY = "harmonized_cell_day.parquet";
     public static final String RESIDUAL = "harmonized_residual_cell_month.parquet";
     static final java.util.Set<String> RESIDUAL_TYPES = java.util.Set.of("modis_unseen", "missing_day_fill");
-    /** cell_day also labels the day-1 carrier rows of background predictions (value 0, n_points 0) modis_m2v_background. */
+    /**
+     * cell_day also labels the day-1 carrier rows of background predictions (value 0, n_points 0) modis_m2v_background,
+     * and (v1.1, ruling R-VS1: the file is canonical) the current NRT day's MODIS-fallback predictions
+     * modis_fallback_m2v_predicted.
+     */
     static final java.util.Set<String> CELL_DAY_SOURCES = java.util.stream.Stream.concat(CodeValues.VALUE_SOURCES.stream(),
-            java.util.stream.Stream.of("modis_m2v_background")).collect(java.util.stream.Collectors.toUnmodifiableSet());
+            java.util.stream.Stream.of("modis_m2v_background", "modis_fallback_m2v_predicted"))
+            .collect(java.util.stream.Collectors.toUnmodifiableSet());
 
     static final List<ColumnSpec> MONTH_COLUMNS = List.of(
             ColumnSpec.required("aoi_id", ColumnKind.TEXT),
