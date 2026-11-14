@@ -15,6 +15,7 @@ import io.emberline.harmonized.domain.AoiMonths;
 import io.emberline.harmonized.domain.DayTotal;
 import io.emberline.harmonized.domain.MonthRecord;
 import io.emberline.harmonized.domain.Reading;
+import io.emberline.harmonized.domain.ResidualSums;
 import io.emberline.harmonized.domain.Status;
 import io.emberline.harmonized.domain.cases.ReadCaseRegistry;
 import io.emberline.shared.Units;
@@ -51,6 +52,7 @@ class SummaryService implements GetSummaryUseCase {
     static final String ROUTE = "summary";
     static final String TERRA = "modis_m2v_terra";
     static final String PARTIAL_RANGE = "partial_range";
+    static final String BACKGROUND = "modis_m2v_background";
 
     private final CatalogApi catalog;
     private final AoiMonthsProvider months;
@@ -133,7 +135,8 @@ class SummaryService implements GetSummaryUseCase {
         boolean partial = Status.PARTIAL.equals(m.status());
         double share = 0;
         if (!partial) {
-            double residual = cellDay.monthResiduals(release, ids, ym, ym).getOrDefault(ym, 0.0);
+            ResidualSums sums = cellDay.monthResiduals(release, ids, ym, ym).get(ym);
+            double residual = sums == null ? 0.0 : sums.total();
             share = residual * (ChronoUnit.DAYS.between(from, to) + 1) / ym.lengthOfMonth();
         }
         Reading r = Reading.of(value + share, lo == null ? null : lo + share, hi == null ? null : hi + share, m.status());
@@ -164,7 +167,7 @@ class SummaryService implements GetSummaryUseCase {
         }
         YearMonth first = YearMonth.from(q.start());
         YearMonth last = YearMonth.from(q.end());
-        Map<YearMonth, Double> residual = cellDay.monthResiduals(release, ids, first, last);
+        Map<YearMonth, ResidualSums> residual = cellDay.monthResiduals(release, ids, first, last);
         Map<YearMonth, Map<String, Double>> byType = residuals.available(release)
                 ? residuals.residualsByType(release, ids, first, last) : Map.of();
         List<MonthResidual> monthResiduals = new ArrayList<>();
@@ -205,15 +208,24 @@ class SummaryService implements GetSummaryUseCase {
         return Status.PARTIAL.equals(m.status()) && m.asOfDate() != null && d.isAfter(m.asOfDate());
     }
 
-    private static MonthResidual monthResidual(Optional<MonthRecord> row, YearMonth ym, int included, Double stored,
-                                               Map<String, Double> byType) {
+    /**
+     * by_type: Σ value per residual_type of harmonized_residual_cell_month plus {@code modis_m2v_background} (the
+     * background-prediction carrier rows of cell_day, which the residual file does not hold).
+     */
+    private static MonthResidual monthResidual(Optional<MonthRecord> row, YearMonth ym, int included, ResidualSums stored,
+                                               Map<String, Double> fileTypes) {
         int days = ym.lengthOfMonth();
         boolean prorated = included < days;
         if (row.isEmpty() || !Status.hasValue(row.get().status())) {
-            return new MonthResidual(ym.getYear(), ym.getMonthValue(), null, prorated, included, days, null, byType,
+            return new MonthResidual(ym.getYear(), ym.getMonthValue(), null, prorated, included, days, null, fileTypes,
                     MonthResidual.NOTE);
         }
-        double residual = Status.PARTIAL.equals(row.get().status()) || stored == null ? 0.0 : stored;
+        boolean none = Status.PARTIAL.equals(row.get().status()) || stored == null;
+        double residual = none ? 0.0 : stored.total();
+        Map<String, Double> byType = new java.util.TreeMap<>(fileTypes);
+        if (!none && stored.background() != 0) {
+            byType.put(BACKGROUND, stored.background());
+        }
         double includedShare = prorated ? residual * included / days : residual;
         return new MonthResidual(ym.getYear(), ym.getMonthValue(), residual, prorated, included, days, includedShare,
                 byType, MonthResidual.NOTE);

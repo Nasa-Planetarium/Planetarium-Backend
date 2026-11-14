@@ -1,6 +1,7 @@
 package io.emberline.harmonized.application.port.out;
 
 import io.emberline.harmonized.domain.DayTotal;
+import io.emberline.harmonized.domain.ResidualSums;
 import io.emberline.shared.release.ReleaseRef;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -19,5 +20,5 @@ public interface CellDayQueryPort {
     List<DayTotal> dayTotals(ReleaseRef release, long[] cells, LocalDate from, LocalDate to);
 
     /** Σ residual_month (day-1 rows) per month over the cells, for months from..to; months without residual are absent. */
-    Map<YearMonth, Double> monthResiduals(ReleaseRef release, long[] cells, YearMonth from, YearMonth to);
+    Map<YearMonth, ResidualSums> monthResiduals(ReleaseRef release, long[] cells, YearMonth from, YearMonth to);
 }

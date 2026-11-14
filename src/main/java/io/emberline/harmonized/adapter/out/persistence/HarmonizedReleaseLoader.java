@@ -44,6 +44,9 @@ class HarmonizedReleaseLoader implements ReleaseLoader {
     public static final String CELL_DAY = "harmonized_cell_day.parquet";
     public static final String RESIDUAL = "harmonized_residual_cell_month.parquet";
     static final java.util.Set<String> RESIDUAL_TYPES = java.util.Set.of("modis_unseen", "missing_day_fill");
+    /** cell_day also labels the day-1 carrier rows of background predictions (value 0, n_points 0) modis_m2v_background. */
+    static final java.util.Set<String> CELL_DAY_SOURCES = java.util.stream.Stream.concat(CodeValues.VALUE_SOURCES.stream(),
+            java.util.stream.Stream.of("modis_m2v_background")).collect(java.util.stream.Collectors.toUnmodifiableSet());
 
     static final List<ColumnSpec> MONTH_COLUMNS = List.of(
             ColumnSpec.required("aoi_id", ColumnKind.TEXT),
@@ -157,7 +160,7 @@ class HarmonizedReleaseLoader implements ReleaseLoader {
                 String day = source.file(CELL_DAY).toString();
                 ParquetColumns d = ParquetColumns.inspect(duck, day, CELL_DAY, CELL_DAY_COLUMNS, report);
                 if (d.ok()) {
-                    FileChecks.codeValues(duck, day, CELL_DAY, d, "value_source", CodeValues.VALUE_SOURCES, CodeValues.VALUE_SOURCE_V0, report);
+                    FileChecks.codeValues(duck, day, CELL_DAY, d, "value_source", CELL_DAY_SOURCES, CodeValues.VALUE_SOURCE_V0, report);
                 }
             } else {
                 report.warn("FILE_ABSENT", CELL_DAY, "day-level summaries answer 503 for this release");

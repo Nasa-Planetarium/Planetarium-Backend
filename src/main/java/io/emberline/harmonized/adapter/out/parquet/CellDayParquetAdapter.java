@@ -2,6 +2,7 @@ package io.emberline.harmonized.adapter.out.parquet;
 
 import io.emberline.harmonized.application.port.out.CellDayQueryPort;
 import io.emberline.harmonized.domain.DayTotal;
+import io.emberline.harmonized.domain.ResidualSums;
 import io.emberline.shared.error.DataUnavailableException;
 import io.emberline.shared.error.ErrorCode;
 import io.emberline.shared.release.ReleaseRef;
@@ -64,7 +65,7 @@ class CellDayParquetAdapter implements CellDayQueryPort {
     }
 
     @Override
-    public Map<YearMonth, Double> monthResiduals(ReleaseRef release, long[] cells, YearMonth from, YearMonth to) {
+    public Map<YearMonth, ResidualSums> monthResiduals(ReleaseRef release, long[] cells, YearMonth from, YearMonth to) {
         String file = files.require(release, ReleaseFiles.CELL_DAY).toString();
         try (Connection c = reader.open()) {
             ParquetReader.cells(c, cells);
@@ -72,10 +73,10 @@ class CellDayParquetAdapter implements CellDayQueryPort {
                 ps.setString(1, file);
                 ps.setDate(2, Date.valueOf(from.atDay(1)));
                 ps.setDate(3, Date.valueOf(to.atEndOfMonth()));
-                Map<YearMonth, Double> out = new TreeMap<>();
+                Map<YearMonth, ResidualSums> out = new TreeMap<>();
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
-                        out.put(YearMonth.of(rs.getInt(1), rs.getInt(2)), rs.getDouble(3));
+                        out.put(YearMonth.of(rs.getInt(1), rs.getInt(2)), new ResidualSums(rs.getDouble(3), rs.getDouble(4)));
                     }
                 }
                 return out;

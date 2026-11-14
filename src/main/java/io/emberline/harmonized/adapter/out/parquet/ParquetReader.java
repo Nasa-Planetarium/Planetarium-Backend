@@ -30,12 +30,10 @@ class ParquetReader {
     synchronized Connection open() throws SQLException {
         if (base == null) {
             Properties props = new Properties();
-            props.setProperty("duckdb.read_only", "false");
             DuckDBConnection c = (DuckDBConnection) DriverManager.getConnection("jdbc:duckdb:", props);
             try (Statement s = c.createStatement()) {
                 s.execute("SET memory_limit = '" + settings.memoryLimit().replace("'", "") + "'");
                 s.execute("SET threads = " + settings.threads());
-                s.execute("SET enable_external_access = true");
             }
             base = c;
         }

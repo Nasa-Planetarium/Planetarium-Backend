@@ -194,7 +194,7 @@ class B1IngestTest {
         assertThat(scalar("SELECT value FROM harmonized.aoi_month WHERE release_id = " + id + " AND aoi_id = 'KR' AND year = 2025 AND month = 3")).isEqualTo("2764");
         assertThat(scalar("SELECT verdict || ' ' || percentile || ' ' || ratio_to_median FROM harmonized.aoi_month_compare WHERE release_id = " + id
                 + " AND aoi_id = 'KR' AND year = 2025 AND month = 3")).isEqualTo("above 100 10.924901185770752");
-        // partitions are attached children of LIST-partitioned parents
-        assertThat(scalar("SELECT count(*) FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid WHERE c.relname LIKE '%\\_r" + id + "'")).isEqualTo("8");
+        // partitions are attached children of LIST-partitioned parents (9 = B1's 8 + harmonized.cell_center, B2)
+        assertThat(scalar("SELECT count(*) FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid WHERE c.relname LIKE '%\\_r" + id + "'")).isEqualTo("9");
     }
 }

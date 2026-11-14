@@ -18,6 +18,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Calendar, comparison, summary. On the routes with a request record the aoi_id path variable is validated by
+ * CatalogApi.requireAoi (400 invalid_param, param aoi_id) instead of {@code @Pattern}, so the record's field errors keep
+ * their own param names (a path constraint would switch the whole method to method validation).
+ */
 @RestController
 @RequestMapping(path = "/api/v1/aois/{aoiId}", produces = "application/json")
 class HarmonizedController {
@@ -35,7 +40,7 @@ class HarmonizedController {
     }
 
     @GetMapping(path = "/calendar", produces = {"application/json", "text/csv"})
-    CalendarResponse calendar(ReleaseRef release, @PathVariable("aoiId") @Pattern(regexp = Patterns.AOI_ID) String aoiId,
+    CalendarResponse calendar(ReleaseRef release, @PathVariable("aoiId") String aoiId,
                               @Valid @ParameterObject CalendarRequest request) {
         return calendar.calendar(release, aoiId, request.toQuery());
     }
@@ -47,7 +52,7 @@ class HarmonizedController {
     }
 
     @GetMapping(path = "/summary", produces = {"application/json", "text/csv"})
-    SummaryResponse summary(ReleaseRef release, @PathVariable("aoiId") @Pattern(regexp = Patterns.AOI_ID) String aoiId,
+    SummaryResponse summary(ReleaseRef release, @PathVariable("aoiId") String aoiId,
                             @Valid @ParameterObject SummaryRequest request) {
         return summary.summary(release, aoiId, request.toQuery());
     }
