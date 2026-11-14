@@ -1,5 +1,5 @@
 # App + one-shot release load. __IMAGE__ is replaced at deploy time (planetarium-backend:<sha8>, imported into k3s).
-# Secrets pl-db (username, password) and pl-firms (key) are created out of band and never printed.
+# Secrets pl-db (username, password) and pl-firms (FIRMS_MAP_KEY, mounted as /run/secrets/firms/key) are created out of band and never printed.
 apiVersion: v1
 kind: ConfigMap
 metadata: {name: pl-app-env, namespace: planetarium}
@@ -39,7 +39,7 @@ spec:
             - {name: tmp, mountPath: /tmp}
       volumes:
         - {name: release, persistentVolumeClaim: {claimName: release, readOnly: true}}
-        - {name: firms, secret: {secretName: pl-firms, optional: true}}
+        - {name: firms, secret: {secretName: pl-firms, optional: true, items: [{key: FIRMS_MAP_KEY, path: key}]}}
         - {name: tmp, emptyDir: {sizeLimit: 4Gi}}
 ---
 apiVersion: batch/v1
