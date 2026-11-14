@@ -416,6 +416,92 @@ class HotspotsApiTest {
         assertThat(get("/api/v1/hotspots" + q, "If-None-Match", r.headers().firstValue("ETag").orElseThrow()).statusCode()).isEqualTo(304);
     }
 
+    // pl-fix2 item 2: /api/export.csv?type=hotspots (contract GET /export.csv = 「위 결과를 CSV로」)
+
+    static final String EXPORT_Q = "bbox=" + KR_BBOX + "&start=2025-03-01&end=2025-03-31&layer=all&limit=50";
+
+    @Test
+    @Order(11)
+    @SuppressWarnings("unchecked")
+    void fix2_exportHotspotsHeaderLineIsTheContractColumnOrder() {
+        HttpResponse<String> csv = get("/api/export.csv?type=hotspots&" + EXPORT_Q);
+        assertThat(csv.statusCode()).as(csv.body()).isEqualTo(200);
+        assertThat(csv.headers().firstValue("Content-Type").orElse("")).startsWith("text/csv");
+        assertThat(csv.headers().firstValue("Content-Disposition").orElse(""))
+                .contains("attachment").contains("emberline_hotspots_124.0_33.0_132.0_39.0_2025-03-01_2025-03-31.csv");
+        assertThat(csv.headers().firstValue("Link")).hasValue("</api/v1/hotspots?" + EXPORT_Q.replace(",", "%2C")
+                + "&format=csv>; rel=\"canonical\"");
+        String header = csv.body().lines().findFirst().orElseThrow();
+        assertThat(header).isEqualTo("latitude,longitude,acq_datetime_utc,date_local,satellite,instrument,frp,confidence,daynight,"
+                + "cell_id,adm0_a3,adm1_code,harmonized_weight,weight_lo,weight_hi,weight_source,is_reference,source,method_version");
+        Map<String, Object> media = (Map<String, Object>) ((Map<String, Object>) ((Map<String, Object>) ((Map<String, Object>) ((Map<String, Object>)
+                Contract.at("paths", "/hotspots", "get").get("responses")).get("200")).get("content")).get("text/csv")).get("schema");
+        assertThat(List.of(header.split(","))).containsExactlyElementsOf((List<String>) media.get("x-csv-columns"));
+        // the export is the canonical CSV byte for byte
+        assertThat(csv.body()).isEqualTo(get("/api/v1/hotspots?" + EXPORT_Q + "&format=csv").body());
+    }
+
+    @Test
+    @Order(12)
+    void fix2_exportHotspotsDataRowEqualsTheJsonRecord() {
+        JsonNode body = json(get("/api/v1/hotspots?" + EXPORT_Q));
+        List<String> lines = get("/api/export.csv?type=hotspots&" + EXPORT_Q).body().lines().toList();
+        assertThat(lines).hasSize(1 + body.get("count").asInt());
+        String[] names = lines.get(0).split(",");
+        for (int row = 0; row < body.get("count").asInt(); row++) {
+            JsonNode h = body.get("hotspots").get(row);
+            String[] cells = lines.get(1 + row).split(",", -1);
+            assertThat(cells).hasSize(names.length);
+            for (int i = 0; i < names.length; i++) {
+                JsonNode v = h.get(names[i]);
+                String as = "row %d column %s".formatted(row, names[i]);
+                if (v == null || v.isNull()) {
+                    assertThat(cells[i]).as(as).isEmpty();
+                } else if (v.isNumber()) {
+                    assertThat(new java.math.BigDecimal(cells[i])).as(as).isEqualByComparingTo(v.decimalValue());
+                } else if (v.isBoolean()) {
+                    assertThat(cells[i]).as(as).isEqualTo(Boolean.toString(v.asBoolean()));
+                } else {
+                    assertThat(cells[i]).as(as).isEqualTo(v.asString());
+                }
+            }
+        }
+    }
+
+    @Test
+    @Order(13)
+    void fix2_exportHotspotsTruncatedCarriesTheJsonSignalAsHeaders() {
+        String q = "bbox=" + KR_BBOX + "&start=2025-03-01&end=2025-03-31&limit=2";
+        JsonNode body = json(get("/api/v1/hotspots?" + q));
+        assertThat(body.get("truncated").asBoolean()).isTrue();
+        HttpResponse<String> csv = get("/api/export.csv?type=hotspots&" + q);
+        assertThat(csv.statusCode()).isEqualTo(200);
+        assertThat(csv.body().lines().toList()).hasSize(1 + 2);
+        assertThat(csv.headers().firstValue("X-Truncated")).hasValue("true");
+        assertThat(csv.headers().firstValue("X-Total-Count")).hasValue(Long.toString(body.get("total").asLong()));
+        assertThat(csv.headers().firstValue("X-Next-Cursor")).hasValue(body.get("next_cursor").asString());
+        // the cursor from the header pages the export like the JSON
+        HttpResponse<String> next = get("/api/export.csv?type=hotspots&" + q + "&cursor=" + body.get("next_cursor").asString());
+        assertThat(next.statusCode()).isEqualTo(200);
+        assertThat(next.body().lines().skip(1).toList()).doesNotContainAnyElementsOf(csv.body().lines().skip(1).toList());
+        // not truncated: false, no cursor header
+        HttpResponse<String> whole = get("/api/export.csv?type=hotspots&" + EXPORT_Q.replace("limit=50", "limit=10000"));
+        assertThat(whole.headers().firstValue("X-Truncated")).hasValue("false");
+        assertThat(whole.headers().firstValue("X-Next-Cursor")).isEmpty();
+        assertThat(whole.headers().firstValue("X-Total-Count")).hasValue(Long.toString(whole.body().lines().count() - 1));
+    }
+
+    @Test
+    @Order(14)
+    void fix2_exportUnknownTypeIsTheExistingAliasError() {
+        for (String type : List.of("type=nope&", "type=HOTSPOTS&", "")) {
+            HttpResponse<String> r = get("/api/export.csv?" + type + EXPORT_Q);
+            assertThat(r.statusCode()).as(type).isEqualTo(404);
+            assertThat(r.headers().firstValue("Content-Type").orElse("")).startsWith("application/problem+json");
+            assertThat(json(r).get("code").asString()).isEqualTo("not_found");
+        }
+    }
+
     static void copyPoints() {
         Path from = V11.resolve("harmonized_hotspots");
         try (Stream<Path> all = Files.walk(from)) {

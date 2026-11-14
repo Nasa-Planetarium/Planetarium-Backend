@@ -43,7 +43,8 @@ public class PublicApiSecurityConfig {
         config.setAllowedOrigins(properties.cors().allowedOrigins());
         config.setAllowedMethods(List.of("GET", "HEAD", "POST", "OPTIONS"));
         config.setAllowedHeaders(List.of("Accept", "Accept-Language", "Content-Type", "If-None-Match", "X-Request-Id"));
-        config.setExposedHeaders(List.of("ETag", "X-Request-Id", "X-Method-Version", "X-Data-Version", "Link", "Retry-After"));
+        config.setExposedHeaders(List.of("ETag", "X-Request-Id", "X-Method-Version", "X-Data-Version", "Link", "Retry-After",
+                "X-Truncated", "X-Total-Count", "X-Next-Cursor"));
         config.setAllowCredentials(false);
         config.setMaxAge(600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

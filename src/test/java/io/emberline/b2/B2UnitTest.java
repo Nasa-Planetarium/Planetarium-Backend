@@ -99,5 +99,16 @@ class B2UnitTest {
         assertThat(c.query()).isEqualTo("start_year=2024&format=csv");
         params.put("type", new String[] {"nope"});
         assertThat(rule.rewrite(params, null).path()).isEqualTo("/api/v1/unknown-alias-type");
+        // pl-fix2: type=hotspots → /api/v1/hotspots with the same parameters (no path parameter) and format=csv
+        Map<String, String[]> hotspots = new java.util.LinkedHashMap<>();
+        hotspots.put("type", new String[] {"hotspots"});
+        hotspots.put("bbox", new String[] {"124,33,132,39"});
+        hotspots.put("start", new String[] {"2025-03-01"});
+        hotspots.put("end", new String[] {"2025-03-02"});
+        hotspots.put("limit", new String[] {"5"});
+        HandoffAliasRule.Canonical h = rule.rewrite(hotspots, null);
+        assertThat(h.path()).isEqualTo("/api/v1/hotspots");
+        assertThat(h.query()).isEqualTo("bbox=124%2C33%2C132%2C39&start=2025-03-01&end=2025-03-02&limit=5&format=csv");
+        assertThat(h.params()).containsOnlyKeys("bbox", "start", "end", "limit", "format");
     }
 }
