@@ -11,6 +11,8 @@ data:
   FIRMS_WMS_BASE_URL: https://firms.modaps.eosdis.nasa.gov
   FIRMS_MAP_KEY_FILE: /run/secrets/firms/key
   EMBERLINE_CORS_ALLOWED_ORIGINS: http://192.168.0.10:18490
+  EMBERLINE_ENV: prod                       # Redis key prefix em:prod: (default 'test' is for the acceptance suite)
+  EMBERLINE_TRUSTED_PROXIES: 10.42.0.0/24   # k3s pod CIDR: pl-web nginx sets X-Forwarded-For
 ---
 apiVersion: apps/v1
 kind: Deployment
