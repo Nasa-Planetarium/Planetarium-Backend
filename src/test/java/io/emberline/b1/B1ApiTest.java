@@ -314,7 +314,8 @@ class B1ApiTest extends AppTestBase {
         Set<String> paths = new TreeSet<>();
         doc.get("paths").properties().forEach(e -> paths.add(e.getKey()));
         assertThat(paths).containsExactlyInAnyOrder("/api/v1/aois", "/api/v1/aois/{aoiId}", "/api/v1/aois/{aoiId}/boundary",
-                "/api/v1/methods/current", "/api/v1/methods/{methodVersion}", "/api/v1/satellite-status", "/api/v1/version");
+                "/api/v1/methods/current", "/api/v1/methods/{methodVersion}", "/api/v1/satellite-status", "/api/v1/version",
+                "/api/v1/hotspots");
         Map<String, Object> contractPaths = (Map<String, Object>) Contract.openapi().get("paths");
         for (String p : paths) {
             String contractPath = p.substring("/api/v1".length());

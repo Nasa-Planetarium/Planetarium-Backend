@@ -97,6 +97,11 @@ class AoiQueryService implements ListAoisUseCase, GetAoiUseCase, CatalogApi {
         return Optional.ofNullable(aoiId).map(id -> directory.of(release.releaseId()).byId().get(id)).map(AoiQueryService::summary);
     }
 
+    @Override
+    public Optional<String> boundaryGeometry(ReleaseRef release, String aoiId) {
+        return port.boundaryGeometry(release.releaseId(), aoiId);
+    }
+
     private static Aoi require(AoiDirectory.Snapshot snapshot, String aoiId, String param) {
         if (aoiId == null || !AOI_ID.matcher(aoiId).matches()) {
             throw new InvalidRequestException(ErrorCode.INVALID_PARAM, param, param + " must match " + Patterns.AOI_ID);

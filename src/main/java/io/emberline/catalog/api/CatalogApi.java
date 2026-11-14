@@ -10,4 +10,7 @@ public interface CatalogApi {
     AoiSummary requireAoi(ReleaseRef release, String aoiId, String param);
 
     Optional<AoiSummary> findAoi(ReleaseRef release, String aoiId);
+
+    /** GeoJSON geometry object (Polygon / MultiPolygon text) of an existing AOI's boundary; empty when it has none. */
+    Optional<String> boundaryGeometry(ReleaseRef release, String aoiId);
 }

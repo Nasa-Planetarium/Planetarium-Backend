@@ -88,6 +88,9 @@ emberline:
   firms:
     wms-base-url: ${FIRMS_WMS_BASE_URL:}
     map-key-file: ${FIRMS_MAP_KEY:}
+  hotspots:
+    max-area-deg2: 100
+    max-days: 366
 logging:
   pattern:
     correlation: "[%X{request_id:-}] "
