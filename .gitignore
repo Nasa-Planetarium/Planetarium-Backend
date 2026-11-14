@@ -1,0 +1,8 @@
+.tools/
+.spec/
+.gradle/
+build/
+*.log
+/data/
+.env
+*.env

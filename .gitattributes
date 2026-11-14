@@ -1,0 +1,5 @@
+* text=auto
+*.bat text eol=crlf
+*.parquet binary
+src/test/resources/release/** -text
+*.jar binary
