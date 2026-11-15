@@ -25,7 +25,8 @@ import org.springframework.test.context.TestPropertySource;
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@TestPropertySource(properties = "emberline.release.poll-interval=1s")
+// own context (and database): a cached context of another class may already hold a different core-b
+@TestPropertySource(properties = {"emberline.release.poll-interval=1s", "pl-pub.test-context=cache-headers"})
 class PublicCacheHeadersTest extends AppTestBase {
 
     static final String DATA = "public, max-age=60, s-maxage=600";

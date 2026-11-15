@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
 /**
  * {@code emberline.ratelimit.*}. Buckets refill intervally: {@code capacity} tokens at start, {@code refillTokens}
@@ -18,11 +19,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param tileCosts      path → token cost of the tiles scope (canonical and alias paths)
  * @param trustedProxies peers (IPs or CIDRs) whose X-Forwarded-For is believed
  * @param hmacSecret     key of the subject HMAC in bucket keys (same on every pod)
+ * @param global         scope global: every public request of all callers together, pod-local bucket (default burst
+ *                       2000, 700 per second) — bounds the origin load whatever the number of addresses
+ *
+ * <p>The defaults are single-user values. The public deployment (about 200 reviewers behind one NAT address) sets
+ * {@code ip}, {@code heavy} and {@code tiles} in deploy/k8s/planetarium-app.yaml (docs/DEVIATIONS.md PUB-RL).
  */
 @ConfigurationProperties("emberline.ratelimit")
 public record RateLimitProperties(Boolean enabled, Limit ip, Limit heavy, Map<String, Integer> heavyCosts, Limit tiles,
-                                  Map<String, Integer> tileCosts, List<String> trustedProxies, String hmacSecret) {
+                                  Map<String, Integer> tileCosts, List<String> trustedProxies, String hmacSecret,
+                                  Limit global) {
 
+    @ConstructorBinding
     public RateLimitProperties {
         enabled = enabled == null || enabled;
         ip = ip == null ? new Limit(100L, 50L, Duration.ofSeconds(1)) : ip.orDefaults(100, 50, Duration.ofSeconds(1));
@@ -35,6 +43,12 @@ public record RateLimitProperties(Boolean enabled, Limit ip, Limit heavy, Map<St
                 "/api/v1/firms/wms-tiles", 1, "/api/firms/wms", 1) : Map.copyOf(tileCosts);
         trustedProxies = trustedProxies == null ? List.of() : trustedProxies.stream().map(String::strip).filter(s -> !s.isEmpty()).toList();
         hmacSecret = hmacSecret == null || hmacSecret.isBlank() ? "emberline-rate-limit" : hmacSecret;
+        global = global == null ? new Limit(2000L, 700L, Duration.ofSeconds(1)) : global.orDefaults(2000, 700, Duration.ofSeconds(1));
+    }
+
+    public RateLimitProperties(Boolean enabled, Limit ip, Limit heavy, Map<String, Integer> heavyCosts, Limit tiles,
+                               Map<String, Integer> tileCosts, List<String> trustedProxies, String hmacSecret) {
+        this(enabled, ip, heavy, heavyCosts, tiles, tileCosts, trustedProxies, hmacSecret, null);
     }
 
     public record Limit(Long capacity, Long refillTokens, Duration refillPeriod) {

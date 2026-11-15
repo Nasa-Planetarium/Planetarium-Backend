@@ -125,6 +125,10 @@ emberline:
       capacity: 240
       refill-tokens: 240
       refill-period: 1m
+    global:
+      capacity: 2000
+      refill-tokens: 700
+      refill-period: 1s
   hotspots:
     max-area-deg2: 100
     max-days-reference: 92

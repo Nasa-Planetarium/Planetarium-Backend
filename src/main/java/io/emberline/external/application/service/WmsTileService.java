@@ -21,8 +21,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.stereotype.Service;
 
 /**
- * FIRMS WMS proxy: validate → clip to Korea → key present? → redis-cache (900 s) → global budget (cache misses
- * only, redis-durable) → upstream → cache. The cache key is a hash of the rebuilt request; it holds no key material.
+ * FIRMS WMS proxy: validate → clip to Korea → key present? → redis-cache (900 s) → the caller's share of the budget →
+ * global budget (cache misses only, redis-durable) → upstream → cache. The cache key is a hash of the rebuilt request; it holds no key material.
  */
 @Service
 @EnableConfigurationProperties(FirmsProperties.class)
@@ -57,6 +57,10 @@ class WmsTileService implements GetWmsTileUseCase {
         Optional<byte[]> hit = cache.get(cacheKey);
         if (hit.isPresent()) {
             return hit.get();
+        }
+        if (properties.callerShare()
+                && !budgets.tryTakeForCaller(BUDGET, properties.budgetPerCaller(), properties.budgetPeriod()).granted()) {
+            throw new UpstreamException(ErrorCode.UPSTREAM_UNAVAILABLE, "the FIRMS map layer is busy for this address; try again later");
         }
         BudgetDecision budget = budgets.tryTake(BUDGET, properties.budgetCapacity(), properties.budgetPeriod());
         if (!budget.granted()) {

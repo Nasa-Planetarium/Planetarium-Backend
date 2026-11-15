@@ -10,9 +10,25 @@ data:
   EMBERLINE_REDIS_DURABLE_URL: redis://pl-redis-durable:6379
   FIRMS_WMS_BASE_URL: https://firms.modaps.eosdis.nasa.gov
   FIRMS_MAP_KEY_FILE: /run/secrets/firms/key
-  EMBERLINE_CORS_ALLOWED_ORIGINS: http://192.168.0.10:18490
+  EMBERLINE_CORS_ALLOWED_ORIGINS: http://192.168.0.10:18490   # the public site is same-origin (Pages Function proxy)
   EMBERLINE_ENV: prod                       # Redis key prefix em:prod: (default 'test' is for the acceptance suite)
-  EMBERLINE_TRUSTED_PROXIES: 10.42.0.0/24   # k3s pod CIDR: pl-web nginx sets X-Forwarded-For
+  EMBERLINE_TRUSTED_PROXIES: 10.42.0.0/24   # k3s pod CIDR: pl-web nginx sets X-Forwarded-For (LAN: $remote_addr, tunnel: X-Client-IP)
+  # Public exposure: ~200 reviewers may share one NAT address (docs/DEVIATIONS.md PUB-RL has the arithmetic).
+  # Per address: ip 1000 burst +500/s, heavy 3600/min, tiles 24000/min. All callers: global 2000 burst +700/s (pod).
+  # FIRMS: one address may spend 1500 of the 4500 upstream misses per 10 min.
+  EMBERLINE_RATELIMIT_IP_CAPACITY: "1000"
+  EMBERLINE_RATELIMIT_IP_REFILLTOKENS: "500"
+  EMBERLINE_RATELIMIT_IP_REFILLPERIOD: 1s
+  EMBERLINE_RATELIMIT_HEAVY_CAPACITY: "3600"
+  EMBERLINE_RATELIMIT_HEAVY_REFILLTOKENS: "3600"
+  EMBERLINE_RATELIMIT_HEAVY_REFILLPERIOD: 1m
+  EMBERLINE_RATELIMIT_TILES_CAPACITY: "24000"
+  EMBERLINE_RATELIMIT_TILES_REFILLTOKENS: "24000"
+  EMBERLINE_RATELIMIT_TILES_REFILLPERIOD: 1m
+  EMBERLINE_RATELIMIT_GLOBAL_CAPACITY: "2000"
+  EMBERLINE_RATELIMIT_GLOBAL_REFILLTOKENS: "700"
+  EMBERLINE_RATELIMIT_GLOBAL_REFILLPERIOD: 1s
+  EMBERLINE_FIRMS_BUDGETPERCALLER: "1500"
 ---
 apiVersion: apps/v1
 kind: Deployment

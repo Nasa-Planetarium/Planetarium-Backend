@@ -3,14 +3,22 @@ package io.emberline.platform.ratelimit;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
  * Who a request is charged to: the TCP peer, or — only when the peer is a trusted proxy — the right-most
- * X-Forwarded-For address that is not itself a trusted proxy. IPv6 addresses are folded to their /64.
+ * X-Forwarded-For address that is not itself a trusted proxy. IPv6 addresses are folded to their /64. Any other
+ * client-IP header (X-Client-IP, CF-Connecting-IP, X-Real-IP) is never read here: pl-web nginx turns the one it trusts
+ * into X-Forwarded-For.
  */
 @Component
 @EnableConfigurationProperties(RateLimitProperties.class)
@@ -19,9 +27,22 @@ public class ClientKeyResolver {
     private static final Pattern LITERAL = Pattern.compile("^[0-9A-Fa-f:.]{2,45}$");
 
     private final List<Cidr> trusted;
+    private final SecretKeySpec hmacKey;
 
     public ClientKeyResolver(RateLimitProperties properties) {
         this.trusted = properties.trustedProxies().stream().map(Cidr::parse).toList();
+        this.hmacKey = new SecretKeySpec(properties.hmacSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+    }
+
+    /** The subject as it appears in bucket keys: an HMAC, so the client address never does. */
+    public String key(HttpServletRequest request) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(hmacKey);
+            return HexFormat.of().formatHex(mac.doFinal(subject(request).getBytes(StandardCharsets.UTF_8)), 0, 16);
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     public String subject(HttpServletRequest request) {

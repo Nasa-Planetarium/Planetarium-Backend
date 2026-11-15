@@ -8,12 +8,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -22,11 +16,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Public-chain abuse defence, before the security chain: scope {@code ip} on every /api request, scope
- * {@code heavy} on the routes of {@code heavy-costs} and scope {@code tiles} on the FIRMS WMS tile routes of
- * {@code tile-costs}. Buckets live on redis-durable under {@code em:{env}:rl:{scope}:{hmac(subject)}} (the client
- * address never appears in a key). Over the limit → 429 rate_limited (10301) with an integer Retry-After and the
- * exhausted scope named in {@code detail}.
+ * Public-chain abuse defence, before the security chain: scope {@code ip} on every /api request, then scope
+ * {@code global} (all callers together, pod-local), then scope {@code heavy} on the routes of {@code heavy-costs} or
+ * scope {@code tiles} on the FIRMS WMS tile routes of {@code tile-costs}. Per-caller buckets live on redis-durable
+ * under {@code em:{env}:rl:{scope}:{hmac(subject)}} (the client address never appears in a key). Over the limit → 429
+ * rate_limited (10301) with an integer Retry-After and the exhausted scope named in {@code detail}.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
@@ -38,7 +32,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final ClientKeyResolver clients;
     private final TokenBuckets buckets;
     private final ProblemWriter problems;
-    private final SecretKeySpec hmacKey;
 
     public RateLimitFilter(RateLimitProperties properties, EventsProperties keys, ClientKeyResolver clients,
                            TokenBuckets buckets, ProblemWriter problems) {
@@ -47,7 +40,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
         this.clients = clients;
         this.buckets = buckets;
         this.problems = problems;
-        this.hmacKey = new SecretKeySpec(properties.hmacSecret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+    }
+
+    /** A refused request: the exhausted scope and the whole seconds to wait. */
+    public record Denial(String scope, long retryAfterSeconds) {
     }
 
     @Override
@@ -58,27 +54,39 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String subject = hmac(clients.subject(request));
-        RateLimitProperties.Limit ip = properties.ip();
-        String scope = "ip";
-        TokenBuckets.Result r = buckets.take(keys.key("rl:ip:" + subject), 1, ip.capacity(), ip.refillTokens(), ip.refillPeriod());
-        String path = path(request);
-        Integer heavyCost = properties.heavyCosts().get(path);
-        Integer tileCost = properties.tileCosts().get(path);
-        if (r.granted() && heavyCost != null) {
-            scope = "heavy";
-            r = take(scope, subject, heavyCost, properties.heavy());
-        } else if (r.granted() && tileCost != null) {
-            scope = "tiles";
-            r = take(scope, subject, tileCost, properties.tiles());
-        }
-        if (!r.granted()) {
-            response.setHeader(HttpHeaders.RETRY_AFTER, Long.toString(r.retryAfterSeconds()));
+        Denial denial = check(request);
+        if (denial != null) {
+            response.setHeader(HttpHeaders.RETRY_AFTER, Long.toString(denial.retryAfterSeconds()));
             problems.write(request, response, ErrorCode.RATE_LIMITED, null, "too many requests (rate limit scope "
-                    + scope + "); retry after " + r.retryAfterSeconds() + " s");
+                    + denial.scope() + "); retry after " + denial.retryAfterSeconds() + " s");
             return;
         }
         chain.doFilter(request, response);
+    }
+
+    /** Takes the request's tokens scope by scope; the first scope that refuses ends the check. Null = allowed. */
+    public Denial check(HttpServletRequest request) {
+        String subject = clients.key(request);
+        String path = path(request);
+        TokenBuckets.Result r = take("ip", subject, 1, properties.ip());
+        if (!r.granted()) {
+            return new Denial("ip", r.retryAfterSeconds());
+        }
+        RateLimitProperties.Limit global = properties.global();
+        r = buckets.takeLocal(keys.key("rl:global"), 1, global.capacity(), global.refillTokens(), global.refillPeriod());
+        if (!r.granted()) {
+            return new Denial("global", r.retryAfterSeconds());
+        }
+        Integer heavyCost = properties.heavyCosts().get(path);
+        Integer tileCost = properties.tileCosts().get(path);
+        String scope = heavyCost != null ? "heavy" : tileCost != null ? "tiles" : null;
+        if (scope != null) {
+            r = take(scope, subject, heavyCost != null ? heavyCost : tileCost, heavyCost != null ? properties.heavy() : properties.tiles());
+            if (!r.granted()) {
+                return new Denial(scope, r.retryAfterSeconds());
+            }
+        }
+        return null;
     }
 
     private TokenBuckets.Result take(String scope, String subject, long cost, RateLimitProperties.Limit limit) {
@@ -87,15 +95,5 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private static String path(HttpServletRequest request) {
         return request.getRequestURI().substring(request.getContextPath().length());
-    }
-
-    private String hmac(String subject) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(hmacKey);
-            return HexFormat.of().formatHex(mac.doFinal(subject.getBytes(StandardCharsets.UTF_8)), 0, 16);
-        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-            throw new IllegalStateException(e);
-        }
     }
 }
