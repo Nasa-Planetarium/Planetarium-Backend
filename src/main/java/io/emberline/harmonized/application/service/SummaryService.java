@@ -75,14 +75,15 @@ class SummaryService implements GetSummaryUseCase {
 
     @Override
     public SummaryResponse summary(ReleaseRef release, String aoiId, SummaryQuery q) {
-        check(q);
+        check(q, limits);
         AoiSummary aoi = catalog.requireAoi(release, aoiId, "aoi_id");
         AoiMonths bundle = months.get(release, aoi.aoiId(), ROUTE);
         Area area = new Area(release, aoi.aoiId());
         return "day".equals(q.freq()) ? daySummary(release, bundle, area, q) : monthSummary(release, bundle, area, q);
     }
 
-    private void check(SummaryQuery q) {
+    /** Range rules shared with the bbox summary (start ≤ end, freq=day ≤ 366 days, ≤ 40 years). */
+    static void check(SummaryQuery q, EmberlineProperties.Limits limits) {
         if (q.start().isAfter(q.end())) {
             throw new InvalidRequestException(ErrorCode.INVALID_PARAM, "start", "start must not be after end");
         }

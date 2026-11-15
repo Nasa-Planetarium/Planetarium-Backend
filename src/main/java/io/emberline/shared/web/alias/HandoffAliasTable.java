@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * contract/handoff-aliases.md as code. Each later packet adds its rows here (B2: /api/calendar, /api/compare,
- * /api/summary, /api/export.csv type=calendar|summary, type=hotspots since pl-fix2; B3: /api/hotspots, /api/cells; B4: /api/firms/wms) — no alias controllers.
+ * /api/summary (aoi_id; bbox since pl-sum), /api/export.csv type=calendar|summary, type=hotspots since pl-fix2; B3: /api/hotspots, /api/cells; B4: /api/firms/wms) — no alias controllers.
  */
 @Component
 public class HandoffAliasTable {
@@ -26,7 +26,9 @@ public class HandoffAliasTable {
                 new SamePathAlias("/api/firms/wms", "/api/v1/firms/wms-tiles"),
                 new PathParamAlias("/api/calendar", "/api/v1/aois/{aoi_id}/calendar", List.of("aoi_id")),
                 new YearMonthPathAlias("/api/compare", "/api/v1/aois/{aoi_id}/months/{year_month}/comparison", List.of("aoi_id", "year_month")),
-                new PathParamAlias("/api/summary", "/api/v1/aois/{aoi_id}/summary", List.of("aoi_id")),
+                new ParamPresenceAlias("/api/summary", List.of(
+                        new ParamPresenceAlias.Choice("aoi_id", new PathParamAlias("/api/summary", "/api/v1/aois/{aoi_id}/summary", List.of("aoi_id"))),
+                        new ParamPresenceAlias.Choice("bbox", new SamePathAlias("/api/summary", "/api/v1/summaries")))),
                 new ParamDispatchAlias("/api/export.csv", "type", Map.of(
                         "calendar", new PathParamAlias("/api/export.csv", "/api/v1/aois/{aoi_id}/calendar", List.of("aoi_id")),
                         "summary", new PathParamAlias("/api/export.csv", "/api/v1/aois/{aoi_id}/summary", List.of("aoi_id")),
