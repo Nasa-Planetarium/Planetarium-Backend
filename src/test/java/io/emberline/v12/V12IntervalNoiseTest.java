@@ -3,7 +3,6 @@ package io.emberline.v12;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.emberline.platform.flyway.MultiSchemaFlywayRunner;
-import io.emberline.shared.release.load.cases.DataCase;
 import io.emberline.support.EmbeddedPg;
 import io.emberline.support.Fixtures;
 import io.emberline.support.IngestCli;
@@ -37,10 +36,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * pl-v12b (v1.2-2026-11-15-r1 rejected with INTERVAL_INVERTED on float noise): value_lo above value_hi by at most
- * {@link DataCase#INTERVAL_NOISE_TOLERANCE} is kept with a warning and served ordered; more still rejects. Releases over
- * owner fixture core-v11: {@code noise} (one cell month lo-hi = 5e-6, one KR aoi month lo-hi = 2e-6), {@code edge}
- * (one cell month lo-hi = exactly 1e-4), {@code wide} (one cell month lo-hi = 2e-4).
+ * pl-v12c (CMD-bb9a2543f9e6): every value_lo above value_hi is kept as stored with one INTERVAL_INVERTED warning per file,
+ * whatever its size, and /cells and /aois/{id}/calendar serve value, value_lo, value_hi as stored (the front orders the
+ * band). Releases over owner fixture core-v11: {@code noise} (one cell month lo-hi = 5e-6, one KR aoi month lo-hi =
+ * 2e-6), {@code edge} (one cell month lo-hi = exactly 1e-4), {@code wide} (one cell month lo-hi = 2e-4),
+ * {@code clean} (core-v11 as is, no inversion).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"management.server.port=0", "emberline.ratelimit.enabled=false", "emberline.release.poll-interval=1s"})
@@ -66,6 +66,7 @@ class V12IntervalNoiseTest {
     IngestCli.Result noise;
     IngestCli.Result edge;
     IngestCli.Result wide;
+    IngestCli.Result clean;
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
@@ -112,7 +113,7 @@ class V12IntervalNoiseTest {
 
     static Path newRoot() {
         try {
-            Path root = Files.createDirectory(Files.createTempDirectory("emberline-v12b").resolve("releases"));
+            Path root = Files.createDirectory(Files.createTempDirectory("emberline-v12c").resolve("releases"));
             Path noise = copy(root.resolve("noise"));
             rewrite(noise, "harmonized_cell_month.parquet", "SELECT * REPLACE ("
                     + cell(NOISE_CELL, "value_lo", "value + 2.5e-6") + ", " + cell(NOISE_CELL, "value_hi", "value - 2.5e-6") + ") FROM src");
@@ -129,6 +130,7 @@ class V12IntervalNoiseTest {
             rewrite(wide, "harmonized_cell_month.parquet", "SELECT * REPLACE ("
                     + cell(NOISE_CELL, "value_lo", "value + 2e-4") + ", " + cell(NOISE_CELL, "value_hi", "value") + ") FROM src");
             resum(wide);
+            copy(root.resolve("clean"));
             return root;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -172,6 +174,7 @@ class V12IntervalNoiseTest {
         noise = IngestCli.run(jdbcUrl, ROOT, "stage", "noise");
         edge = IngestCli.run(jdbcUrl, ROOT, "stage", "edge");
         wide = IngestCli.run(jdbcUrl, ROOT, "stage", "wide");
+        clean = IngestCli.run(jdbcUrl, ROOT, "stage", "clean");
         assertThat(noise.exit()).as(noise.json().toString()).isZero();
         assertThat(IngestCli.run(jdbcUrl, ROOT, "activate", "noise", "--expect-sha256", Fixtures.sha256(ROOT.resolve("noise/SHA256SUMS"))).exit()).isZero();
         long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
@@ -213,12 +216,17 @@ class V12IntervalNoiseTest {
                 + key + "') AND cell_id = " + cellId + " AND year = 2025 AND month = 3");
     }
 
+    String storedKrMonth(String column) throws SQLException {
+        return scalar("SELECT " + column + " FROM harmonized.aoi_month WHERE release_id = (SELECT id FROM ingest.release WHERE release_key = 'noise') "
+                + "AND aoi_id = 'KR' AND year = " + KR_MONTH[0] + " AND month = " + KR_MONTH[1]);
+    }
+
+    static final String CELL_WARNING = "INTERVAL_INVERTED:harmonized_cell_month.parquet:1 rows kept as stored";
+
     @Test
-    void noiseInversionOf5em6StagesWithTheWarningAndLoadsTheRowAsStored() throws SQLException {
+    void inversionOf5em6IsKeptWithTheWarningAndLoadedAsStored() throws SQLException {
         assertThat(noise.reasons()).isEmpty();
-        assertThat(warnings(noise)).contains(
-                "INTERVAL_INVERTED_NOISE:harmonized_cell_month.parquet:1 rows kept as stored (lo-hi <= 1e-4)",
-                "INTERVAL_INVERTED_NOISE:aoi_month.parquet:1 rows kept as stored (lo-hi <= 1e-4)");
+        assertThat(warnings(noise)).contains(CELL_WARNING, "INTERVAL_INVERTED:aoi_month.parquet:1 rows kept as stored");
         double lo = Double.parseDouble(storedCell("noise", NOISE_CELL, "value_lo"));
         double hi = Double.parseDouble(storedCell("noise", NOISE_CELL, "value_hi"));
         assertThat(lo - hi).as("stored inverted, A1").isBetween(4.9e-6, 5.1e-6);
@@ -228,20 +236,29 @@ class V12IntervalNoiseTest {
     void inversionOfExactly1em4IsKept() throws SQLException {
         assertThat(edge.exit()).as(edge.json().toString()).isZero();
         assertThat(edge.reasons()).isEmpty();
-        assertThat(warnings(edge)).contains("INTERVAL_INVERTED_NOISE:harmonized_cell_month.parquet:1 rows kept as stored (lo-hi <= 1e-4)");
+        assertThat(warnings(edge)).contains(CELL_WARNING);
         assertThat(Double.parseDouble(storedCell("edge", EDGE_CELL, "value_lo")) - Double.parseDouble(storedCell("edge", EDGE_CELL, "value_hi")))
-                .isEqualTo(DataCase.INTERVAL_NOISE_TOLERANCE);
+                .isEqualTo(1e-4);
     }
 
     @Test
-    void inversionOf2em4StillRejects() {
-        assertThat(wide.exit()).as(wide.json().toString()).isEqualTo(3);
-        assertThat(wide.reasons()).contains("INTERVAL_INVERTED:harmonized_cell_month.parquet:1 rows");
-        assertThat(warnings(wide)).noneMatch(w -> w.startsWith("INTERVAL_INVERTED_NOISE:harmonized_cell_month.parquet"));
+    void inversionOf2em4IsKept() throws SQLException {
+        assertThat(wide.exit()).as(wide.json().toString()).isZero();
+        assertThat(wide.reasons()).isEmpty();
+        assertThat(warnings(wide)).contains(CELL_WARNING);
+        double lo = Double.parseDouble(storedCell("wide", NOISE_CELL, "value_lo"));
+        double hi = Double.parseDouble(storedCell("wide", NOISE_CELL, "value_hi"));
+        assertThat(lo - hi).as("stored inverted, A1").isBetween(1.99e-4, 2.01e-4);
     }
 
     @Test
-    void servedBandOfAKeptNoiseRowIsNotInverted() throws SQLException {
+    void releaseWithoutInversionHasNoIntervalInvertedWarning() {
+        assertThat(clean.exit()).as(clean.json().toString()).isZero();
+        assertThat(warnings(clean)).noneMatch(w -> w.startsWith("INTERVAL_INVERTED"));
+    }
+
+    @Test
+    void cellsAndCalendarServeTheInvertedBandAsStored() throws SQLException {
         JsonNode cells = json(get("/api/v1/cells?aoi_id=KR&month=2025-03&format=json"));
         JsonNode props = null;
         for (JsonNode f : cells.get("features")) {
@@ -250,9 +267,9 @@ class V12IntervalNoiseTest {
             }
         }
         assertThat(props).as("cell " + NOISE_CELL + " served").isNotNull();
-        assertThat(props.get("value_lo").doubleValue()).isLessThan(props.get("value_hi").doubleValue());
-        assertThat(props.get("value_lo").doubleValue()).isEqualTo(Double.parseDouble(storedCell("noise", NOISE_CELL, "value_hi")));
-        assertThat(props.get("value_hi").doubleValue()).isEqualTo(Double.parseDouble(storedCell("noise", NOISE_CELL, "value_lo")));
+        assertThat(props.get("value_lo").doubleValue()).as(props.toString()).isGreaterThan(props.get("value_hi").doubleValue());
+        assertThat(props.get("value_lo").doubleValue()).isEqualTo(Double.parseDouble(storedCell("noise", NOISE_CELL, "value_lo")));
+        assertThat(props.get("value_hi").doubleValue()).isEqualTo(Double.parseDouble(storedCell("noise", NOISE_CELL, "value_hi")));
         assertThat(props.get("value").doubleValue()).isEqualTo(Double.parseDouble(storedCell("noise", NOISE_CELL, "value")));
 
         JsonNode cal = json(get("/api/v1/aois/KR/calendar?start_year=" + KR_MONTH[0] + "&end_year=" + KR_MONTH[0]));
@@ -264,7 +281,9 @@ class V12IntervalNoiseTest {
         }
         assertThat(month).as(cal.toString()).isNotNull();
         assertThat(month.get("value_lo").isNumber()).as(month.toString()).isTrue();
-        assertThat(month.get("value_lo").doubleValue()).as(month.toString()).isLessThan(month.get("value_hi").doubleValue());
-        assertThat(month.get("value").doubleValue()).isBetween(month.get("value_lo").doubleValue(), month.get("value_hi").doubleValue());
+        assertThat(month.get("value_lo").doubleValue()).as(month.toString()).isGreaterThan(month.get("value_hi").doubleValue());
+        assertThat(month.get("value_lo").doubleValue()).isEqualTo(Double.parseDouble(storedKrMonth("value_lo")));
+        assertThat(month.get("value_hi").doubleValue()).isEqualTo(Double.parseDouble(storedKrMonth("value_hi")));
+        assertThat(month.get("value").doubleValue()).isEqualTo(Double.parseDouble(storedKrMonth("value")));
     }
 }
