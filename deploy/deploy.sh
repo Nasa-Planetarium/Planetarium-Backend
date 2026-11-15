@@ -66,8 +66,30 @@ print(r.get("release_key") or "-", v.get("data_version") or "none")')"
   echo "pl-web data_version=$dv (cache key switched, pl-web restarted)"
 }
 
+# Waits for the load Job by polling its conditions: 0 on Complete, 1 at once on Failed (a rejected stage exits 3 and the
+# Job fails; a kubectl wait on the complete condition never returns on that and hung until its timeout), 1 after the
+# ceiling. Usage: wait_load_job <job> <ceiling seconds>
+wait_load_job() {
+  local job=$1 ceiling=$2 start=$SECONDS conds
+  while :; do
+    conds=$(kubectl -n "$NS" get "job/$job" -o jsonpath='{range .status.conditions[?(@.status=="True")]}{.type}{"\n"}{end}' 2>/dev/null || true)
+    if grep -qx 'Complete' <<<"$conds"; then
+      return 0
+    fi
+    if grep -qxE 'Failed|FailureTarget' <<<"$conds"; then
+      echo "job/$job failed; see: kubectl -n $NS logs job/$job" >&2
+      return 1
+    fi
+    if [ $((SECONDS - start)) -ge "$ceiling" ]; then
+      echo "job/$job neither Complete nor Failed after ${ceiling}s" >&2
+      return 1
+    fi
+    sleep "${LOAD_POLL_SECONDS:-10}"
+  done
+}
+
 if [ -n "$LOAD" ]; then
-  kubectl -n "$NS" wait --for=condition=complete "job/pl-load-$SLUG" --timeout=3600s >/dev/null
+  wait_load_job "pl-load-$SLUG" 3600
   sync_data_version "$LOAD"
 else
   sync_data_version
