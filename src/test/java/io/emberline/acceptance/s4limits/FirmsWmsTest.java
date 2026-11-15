@@ -42,7 +42,7 @@ import org.springframework.test.context.DynamicPropertySource;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(OutputCaptureExtension.class)
-class WmsTest extends AppTestBase {
+class FirmsWmsTest extends AppTestBase {
 
     static final Redises REDIS = new Redises().start();
     static final String KEY = "FAKEKEY0123456789abcdef0123456789";

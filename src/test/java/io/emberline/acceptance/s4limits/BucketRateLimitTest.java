@@ -31,7 +31,7 @@ import tools.jackson.databind.JsonNode;
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class RateLimitTest extends AppTestBase {
+class BucketRateLimitTest extends AppTestBase {
 
     static final Redises REDIS = new Redises().start();
     RedisCommands<String, String> durable;

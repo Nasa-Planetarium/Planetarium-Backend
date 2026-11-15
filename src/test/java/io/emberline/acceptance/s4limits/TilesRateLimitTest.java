@@ -30,7 +30,7 @@ import tools.jackson.databind.JsonNode;
  * pl-fix2 item 3: the FIRMS WMS tile routes have their own scope {@code tiles} (default 240 per minute) instead of
  * {@code heavy} (30 per minute, still /cells and /hotspots). Scopes tiles and heavy keep their defaults here; the ip
  * scope is raised so that 241 requests within a second measure the tiles bucket, not the ip one. Fake upstream and
- * fake key file as in WmsTest; the upstream budget is far above what the test asks for.
+ * fake key file as in FirmsWmsTest; the upstream budget is far above what the test asks for.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

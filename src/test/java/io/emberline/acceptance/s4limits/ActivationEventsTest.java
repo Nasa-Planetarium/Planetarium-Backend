@@ -38,7 +38,7 @@ import org.springframework.test.context.DynamicPropertySource;
 /** release.activated through the publication registry → Redis Streams → inbox / DLQ. */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class EventsTest extends AppTestBase {
+class ActivationEventsTest extends AppTestBase {
 
     static final Redises REDIS = new Redises().start();
     static final String STREAM = "em:test:evt:release";
