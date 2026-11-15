@@ -38,7 +38,12 @@ columns and kinds (aliases `name→name_ko`, `parent_aoi→parent_id`, v0 column
 (cells: by the unique index after COPY), and data cases through `DataCaseRegistry` (one handler class per case):
 `MISSING_MONTH_NULL_VALUE` keep NULL (E2) · `MISSING_MONTH_WITH_VALUE` keep · `VALUE_OUTSIDE_INTERVAL` keep (E3) ·
 `NEGATIVE_VALUE` (value / value_lo / value_hi < 0, v1.2) keep as stored, warning `NEGATIVE_VALUE:<file>:<n> rows kept as
-stored; drawn as 0` · `NULL_VALUE_NOT_MISSING` / `INTERVAL_INVERTED` / `NEGATIVE_COUNT` (raw_modis, raw_viirs, n_cells < 0) reject. A rejected release leaves no partitions and
+stored; drawn as 0` · `INTERVAL_INVERTED_NOISE` (value_lo > value_hi by at most `DataCase.INTERVAL_NOISE_TOLERANCE` = 1e-4
+absolute: float noise of the v1.2 static-source subtraction, max 1.67e-5 in v1.2-2026-11-15-r1) keep as stored, warning
+`INTERVAL_INVERTED_NOISE:<file>:<n> rows kept as stored (lo-hi <= 1e-4)`; the read SELECTs (`select_aoi_months.sql`,
+`select_cells_bbox.sql`) serve the band ordered, lower bound first, so no endpoint serves it inverted ·
+`NULL_VALUE_NOT_MISSING` / `INTERVAL_INVERTED` (value_lo - value_hi > 1e-4) / `NEGATIVE_COUNT` (raw_modis, raw_viirs,
+n_cells < 0) reject. A rejected release leaves no partitions and
 does not touch the active release. Values are copied as the files have them (A1).
 
 ## Schemas, tables, partitions, indexes
