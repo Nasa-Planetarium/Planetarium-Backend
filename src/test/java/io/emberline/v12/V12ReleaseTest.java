@@ -258,6 +258,8 @@ class V12ReleaseTest {
         assertThat(v11.state()).isEqualTo("LOADED");
         assertThat(v11.json().get("rows").has("provenance.satellite_month")).isFalse();
         assertThat(scalar("SELECT count(*) FROM provenance.satellite_month WHERE release_id = " + releaseId("v11"))).isEqualTo("0");
+        assertThat(scalar("SELECT count(*) FROM pg_tables WHERE schemaname = 'provenance' AND tablename = 'satellite_month_r" + releaseId("v11") + "'"))
+                .as("no satellite_month partition for a release without the file").isEqualTo("0");
     }
 
     @Test

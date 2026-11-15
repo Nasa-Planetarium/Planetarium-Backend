@@ -66,7 +66,7 @@ COPYs, builds the indexes, adds `CHECK (release_id = id)`, ANALYZEs and ATTACHes
 Same folder layout as v1.1 plus:
 
 - `satellite_day_status.parquet`, `satellite_month_status.parquet` — listed in `SHA256SUMS`, optional (absent → as v1.1:
-  `FILE_ABSENT` warning for the day file, nothing for the month file, `satellite_month` partition empty and no
+  `FILE_ABSENT` warning for the day file, nothing for the month file, no `satellite_month` partition and no
   `provenance.satellite_month` key in `rows`). The day file's extra columns (`n_det_*`, `coverage`, `baseline`, `status_r*`,
   `seasonal_*` …) are not loaded; `data_source` / `updated_at` stay optional (`COLUMN_ABSENT` warnings). The month table is
   loaded but no endpoint reads it yet (the v1.2 contract asks for no month-level satellite status).

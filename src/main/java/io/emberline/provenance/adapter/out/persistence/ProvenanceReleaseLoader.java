@@ -209,9 +209,10 @@ class ProvenanceReleaseLoader implements ReleaseLoader {
             partitions.finish(T_DAY, id, SqlResource.statements("provenance/index_satellite_day.sql"));
             rows.put(T_DAY, days);
 
-            partitions.create(T_SAT_MONTH, id);
-            long satMonths = 0;
+            // only a release that ships satellite_month_status gets a satellite_month partition (v1.1: as before)
             if (source.has(SMS)) {
+                partitions.create(T_SAT_MONTH, id);
+                long satMonths;
                 ParquetColumns sm = ParquetColumns.inspect(duck, source.file(SMS).toString(), SMS, SMS_COLUMNS, scratch);
                 try (PreparedStatement ps = duck.prepareStatement(sm.render(SqlResource.text("provenance/duck_satellite_month.sql")))) {
                     ps.setString(1, source.file(SMS).toString());
@@ -224,9 +225,7 @@ class ProvenanceReleaseLoader implements ReleaseLoader {
                                         .integer(r.getLong(10), r.wasNull()).text(r.getString(11))));
                     }
                 }
-            }
-            partitions.finish(T_SAT_MONTH, id, SqlResource.statements("provenance/index_satellite_month.sql"));
-            if (source.has(SMS)) {
+                partitions.finish(T_SAT_MONTH, id, SqlResource.statements("provenance/index_satellite_month.sql"));
                 rows.put(T_SAT_MONTH, satMonths);
             }
             return new LoadResult(rows);
