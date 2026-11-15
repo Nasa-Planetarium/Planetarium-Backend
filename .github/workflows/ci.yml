@@ -1,0 +1,82 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  leak-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Leak scan (tracked files + commit messages of this change)
+        env:
+          LEAK_SCAN_EXTRA: ${{ secrets.LEAK_SCAN_EXTRA }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            python3 tools/leak_scan.py "$BASE..HEAD"
+          else
+            python3 tools/leak_scan.py
+          fi
+
+  node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Worker, Pages Function and tool tests
+        run: node --test deploy/cloudflare/worker/test/*.test.js deploy/cloudflare/pages-function-sample/test/*.test.js tools/test/*.test.mjs
+
+  gradle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - name: ./gradlew check (test + archTest; embedded PostgreSQL and Redis)
+        run: ./gradlew check --no-daemon
+      - name: Test counts and skipped tests
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          t = s = f = e = 0
+          skipped = []
+          for p in glob.glob("build/test-results/*/*.xml"):
+              r = ET.parse(p).getroot()
+              t += int(r.get("tests", 0)); s += int(r.get("skipped", 0))
+              f += int(r.get("failures", 0)); e += int(r.get("errors", 0))
+              for c in r.iter("testcase"):
+                  if c.find("skipped") is not None:
+                      skipped.append(f'{c.get("classname")}.{c.get("name")}')
+          lines = [f"tests={t} skipped={s} failures={f} errors={e}"] + [f"SKIPPED (not passed): {x}" for x in skipped]
+          print("\n".join(lines))
+          with open(__import__("os").environ["GITHUB_STEP_SUMMARY"], "a") as out:
+              out.write("### Gradle tests\n\n" + "\n".join(f"- {l}" for l in lines) + "\n")
+          PY
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: build/reports/tests/
+          retention-days: 7
