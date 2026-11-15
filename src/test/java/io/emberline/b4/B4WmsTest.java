@@ -182,7 +182,7 @@ class B4WmsTest extends AppTestBase {
         assertThat(r.statusCode()).isEqualTo(200);
         assertThat(r.headers().firstValue("Content-Type").orElse("")).startsWith("image/png");
         assertThat(r.body()).isEqualTo(PNG);
-        assertThat(r.headers().firstValue("Cache-Control")).hasValue("public, max-age=900");
+        assertThat(r.headers().firstValue("Cache-Control")).hasValue("public, max-age=60, s-maxage=60");
         HttpResponse<String> extra = text(T + "&foo=1");
         assertThat(extra.statusCode()).isEqualTo(400);
         assertThat(json(extra).get("code").asString()).isEqualTo("invalid_param");

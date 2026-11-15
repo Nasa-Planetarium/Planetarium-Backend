@@ -608,7 +608,7 @@ class B2ApiTest extends B2AppBase {
             assertThat(r.headers().firstValue("X-Data-Version")).as(p).hasValue(dataVersion);
             String vary = String.join(",", r.headers().allValues("Vary"));
             assertThat(vary).as(p).contains("Accept").contains("Accept-Language");
-            assertThat(r.headers().firstValue("Cache-Control")).as(p).hasValue("public, max-age=0, must-revalidate");
+            assertThat(r.headers().firstValue("Cache-Control")).as(p).hasValue("public, max-age=60, s-maxage=600");
         }
     }
 

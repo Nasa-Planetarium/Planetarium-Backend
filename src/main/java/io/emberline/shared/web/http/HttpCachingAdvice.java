@@ -30,15 +30,20 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 /**
  * Cache headers for successful GETs on a pinned release: ETag = sha256(path template, normalized query, negotiated
  * media type, data_version, method_version, response schema version); If-None-Match → 304 without body;
- * X-Method-Version, X-Data-Version, Vary and {@code Cache-Control: public, max-age=0, must-revalidate}.
- * Without a release (only /version answers then) the response is {@code no-cache}.
+ * X-Method-Version, X-Data-Version, Vary and {@link #CACHE_CONTROL_DATA} ({@link #CACHE_CONTROL_VERSION} on /version,
+ * the endpoint clients poll to notice an activation). Without a release (only /version answers then) the response is
+ * {@code no-cache}. Shared caches (pl-web proxy_cache) key on the data_version, so s-maxage never outlives a release.
  */
 @ControllerAdvice
 public class HttpCachingAdvice implements ResponseBodyAdvice<Object> {
 
     /** Bump when a response record changes shape, so old ETags stop matching. */
     static final String SCHEMA_VERSION = "s1";
-    public static final String CACHE_CONTROL_DATA = "public, max-age=0, must-revalidate";
+    /** Release-pinned data: browsers reuse 60 s, shared caches 600 s (docs/DEVIATIONS.md PUB-CACHE). */
+    public static final String CACHE_CONTROL_DATA = "public, max-age=60, s-maxage=600";
+    /** /version names the active release: browsers revalidate every time, shared caches hold it 5 s. */
+    public static final String CACHE_CONTROL_VERSION = "public, max-age=0, s-maxage=5, must-revalidate";
+    static final String VERSION_PATTERN = "/api/v1/version";
 
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
@@ -70,7 +75,8 @@ public class HttpCachingAdvice implements ResponseBodyAdvice<Object> {
         headers.set(HttpHeaders.ETAG, etag);
         headers.set("X-Method-Version", release.methodVersion());
         headers.set("X-Data-Version", release.dataVersion());
-        headers.set(HttpHeaders.CACHE_CONTROL, CACHE_CONTROL_DATA);
+        headers.set(HttpHeaders.CACHE_CONTROL, VERSION_PATTERN.equals(req.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE))
+                ? CACHE_CONTROL_VERSION : CACHE_CONTROL_DATA);
         if (matches(req.getHeader(HttpHeaders.IF_NONE_MATCH), etag)) {
             response.setStatusCode(HttpStatus.NOT_MODIFIED);
             headers.remove(HttpHeaders.CONTENT_TYPE);
