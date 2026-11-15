@@ -171,10 +171,16 @@ class PublicDeployConfigTest {
             }
         }
         assertThat(tunnelService).isTrue();
-        Map<String, Object> lanService = all.stream().filter(d -> "pl-web-lan".equals(name(d))).findFirst().orElseThrow();
-        Map<String, Object> spec = map(lanService.get("spec"));
-        assertThat(spec).containsEntry("type", "LoadBalancer").containsEntry("externalTrafficPolicy", "Local");
-        assertThat(map(((List<?>) spec.get("ports")).get(0))).containsEntry("port", 18490).containsEntry("targetPort", 8080);
+        // ServiceLB is disabled on aibox (DEVIATIONS PUB-LAN): no node-port Service at all; LAN stays the port-forward to pl-web.
+        for (Map<String, Object> d : all) {
+            if ("Service".equals(d.get("kind"))) {
+                assertThat(map(d.get("spec")).get("type")).as(name(d)).isIn(null, "ClusterIP");
+            }
+        }
+        Map<String, Object> lanService = all.stream()
+                .filter(d -> "Service".equals(d.get("kind")) && "pl-web".equals(name(d))).findFirst().orElseThrow();
+        assertThat(map(((List<?>) map(lanService.get("spec")).get("ports")).get(0)))
+                .containsEntry("port", 8080).containsEntry("targetPort", 8080);
     }
 
     @Test

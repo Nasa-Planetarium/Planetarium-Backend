@@ -9,30 +9,25 @@ browser ─▶ Cloudflare Pages emberline.pages.dev (static, frontend repo GitHu
                        └─ cloudflared Deployment emberline-tunnel (K3s, ns planetarium, 2 replicas)
                             └─ pl-web-tunnel.planetarium.svc.cluster.local:8090 (nginx tunnel listener, allowlist)
                                  └─ pl-app:8080 (Spring)
-LAN: 192.168.0.10:18490 ─ ServiceLB pl-web-lan ─▶ pl-web :8080 (static www + /api, as before)
+LAN: 192.168.0.10:18490 ─ pl-web-forward-18490.service (kubectl port-forward) ─▶ pl-web :8080 (static www + /api, as before)
 ```
 
 Nothing in this repository holds a token, an account ID or a secret. Tokens are typed into the shell or the dashboard and
 end up in K8s Secret `emberline-tunnel` or GitHub secrets only. Every `kubectl` below uses
 `KUBECONFIG=$HOME/.kube/omb-k3s.yaml` and namespace `planetarium`.
 
-## A. LAN cut-over (replaces `pl-web-forward-18490.service`)
+## A. pl-web listeners (LAN entry unchanged)
 
-1. Check that K3s ServiceLB is on: `kubectl -n kube-system get pods -l svccontroller.k3s.cattle.io/svcname` (any
-   `svclb-*` pod, or `ps aux | grep -c '[d]isable=servicelb'` = 0 on the node). If it is disabled, use the NodePort
-   block that is commented under `pl-web-lan` in `deploy/k8s/planetarium.yaml` instead (LAN URL becomes `:30490`).
+1. K3s ServiceLB is disabled on aibox, so the LAN entry stays `pl-web-forward-18490.service` (kubectl port-forward to
+   Service `pl-web:8080`). LAN callers reach nginx as 127.0.0.1 and share one rate-limit address (DEVIATIONS PUB-LAN).
 2. Apply: `kubectl apply -f deploy/k8s/planetarium.yaml` (new pl-web config with two listeners, ConfigMap
-   `pl-web-release`, Services `pl-web-lan` and `pl-web-tunnel`, NetworkPolicy `pl-web-ingress`). Then
+   `pl-web-release`, Service `pl-web-tunnel`, NetworkPolicy `pl-web-ingress`). Then
    `kubectl -n planetarium rollout status deploy/pl-web`.
 3. Write the current `data_version` into nginx: `deploy/deploy.sh <worktree of the running image>` (no `--load`;
    rebuilds the same image tag, then syncs `pl-web-release`). Until this runs, nginx keys on `none` and caches nothing.
 4. Verify from another LAN machine: `curl -si http://192.168.0.10:18490/api/v1/version | head -20` → 200 with
-   `X-Cache:` and `Cache-Control: public, max-age=0, s-maxage=5, must-revalidate`; the site loads in a browser; then
-   `kubectl -n planetarium logs deploy/pl-web --tail=5` shows that machine's address, not 10.42.x.x. ServiceLB's
-   hostPort rule takes inbound LAN traffic as soon as its `svclb-pl-web-lan-*` pod runs, so this check already goes
-   through the new path.
-5. Stop the forward: `systemctl --user disable --now pl-web-forward-18490.service` (or `sudo systemctl …` if it is a
-   system unit). Repeat step 4.
+   `X-Cache:` and `Cache-Control: public, max-age=0, s-maxage=5, must-revalidate`; the site loads in a browser.
+   The forward reconnects by itself after the pl-web restart (its loop retries every 3 s).
 
 ## B. Rate limits and cache headers
 
@@ -112,8 +107,7 @@ The workflow runs `wrangler pages deploy <build dir> --project-name emberline` w
 2. Worker: `npx wrangler rollback` (previous version) or delete the Worker; the Pages Function then answers 503 for
    `/api/v1/*` while static pages stay up. Pages: Deployments → previous deployment → Rollback.
 3. pl-web: `git show 1760655:deploy/k8s/planetarium.yaml | kubectl apply -f -`, then
-   `kubectl -n planetarium delete svc pl-web-tunnel pl-web-lan networkpolicy/pl-web-ingress` and start the forward
-   unit again (`systemctl --user enable --now pl-web-forward-18490.service`).
+   `kubectl -n planetarium delete svc pl-web-tunnel networkpolicy/pl-web-ingress`.
 4. Rate limits: `git show 1760655:deploy/k8s/planetarium-app.yaml` → deploy (removes the public numbers).
 5. Tunnel for good: delete Deployment `emberline-tunnel`, Secret `emberline-tunnel`, then the tunnel in the dashboard.
 
