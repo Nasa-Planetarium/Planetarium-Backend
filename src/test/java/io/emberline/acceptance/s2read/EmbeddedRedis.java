@@ -1,4 +1,4 @@
-package io.emberline.acceptance.read;
+package io.emberline.acceptance.s2read;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

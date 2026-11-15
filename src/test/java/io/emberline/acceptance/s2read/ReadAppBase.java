@@ -1,4 +1,4 @@
-package io.emberline.acceptance.read;
+package io.emberline.acceptance.s2read;
 
 import io.emberline.platform.flyway.MultiSchemaFlywayRunner;
 import io.emberline.support.EmbeddedPg;

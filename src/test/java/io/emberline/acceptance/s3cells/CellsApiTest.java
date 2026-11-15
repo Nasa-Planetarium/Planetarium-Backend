@@ -1,4 +1,4 @@
-package io.emberline.acceptance.cells;
+package io.emberline.acceptance.s3cells;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -1,7 +1,7 @@
-package io.emberline.acceptance.read;
+package io.emberline.acceptance.s2read;
 
-import static io.emberline.acceptance.read.ReadSupport.num;
-import static io.emberline.acceptance.read.ReadSupport.text;
+import static io.emberline.acceptance.s2read.ReadSupport.num;
+import static io.emberline.acceptance.s2read.ReadSupport.text;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 

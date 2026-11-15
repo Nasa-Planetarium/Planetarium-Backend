@@ -1,4 +1,4 @@
-package io.emberline.acceptance.skeleton;
+package io.emberline.acceptance.s0skeleton;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

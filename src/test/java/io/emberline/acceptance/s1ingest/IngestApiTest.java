@@ -1,4 +1,4 @@
-package io.emberline.acceptance.ingest;
+package io.emberline.acceptance.s1ingest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
