@@ -16,8 +16,8 @@ public final class DataCaseRegistry {
 
     static {
         for (DataCaseHandler h : List.of(new KeepNullAsMissingHandler(), new KeepMissingWithValueHandler(),
-                new KeepOutsideIntervalHandler(), new RejectRowsHandler(DataCase.NULL_VALUE_NOT_MISSING),
-                new RejectRowsHandler(DataCase.INTERVAL_INVERTED), new RejectRowsHandler(DataCase.NEGATIVE_VALUE))) {
+                new KeepOutsideIntervalHandler(), new KeepNegativeValueHandler(), new RejectRowsHandler(DataCase.NULL_VALUE_NOT_MISSING),
+                new RejectRowsHandler(DataCase.INTERVAL_INVERTED), new RejectRowsHandler(DataCase.NEGATIVE_COUNT))) {
             HANDLERS.put(h.handles(), h);
         }
     }

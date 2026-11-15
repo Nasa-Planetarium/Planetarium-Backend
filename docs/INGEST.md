@@ -37,7 +37,8 @@ columns and kinds (aliases `name→name_ko`, `parent_aoi→parent_id`, v0 column
 `kr/sido/sgg` → `country/kr_sido/kr_sgg`; value_source v0 names → v1, reported in `aliases_used`), duplicate keys
 (cells: by the unique index after COPY), and data cases through `DataCaseRegistry` (one handler class per case):
 `MISSING_MONTH_NULL_VALUE` keep NULL (E2) · `MISSING_MONTH_WITH_VALUE` keep · `VALUE_OUTSIDE_INTERVAL` keep (E3) ·
-`NULL_VALUE_NOT_MISSING` / `INTERVAL_INVERTED` / `NEGATIVE_VALUE` reject. A rejected release leaves no partitions and
+`NEGATIVE_VALUE` (value / value_lo / value_hi < 0, v1.2) keep as stored, warning `NEGATIVE_VALUE:<file>:<n> rows kept as
+stored; drawn as 0` · `NULL_VALUE_NOT_MISSING` / `INTERVAL_INVERTED` / `NEGATIVE_COUNT` (raw_modis, raw_viirs, n_cells < 0) reject. A rejected release leaves no partitions and
 does not touch the active release. Values are copied as the files have them (A1).
 
 ## Schemas, tables, partitions, indexes
@@ -55,6 +56,25 @@ COPYs, builds the indexes, adds `CHECK (release_id = id)`, ANALYZEs and ATTACHes
 | observation | `cell_month` (code columns as enums, no per-row method_version) | 51,562,642 | unique (year, month, cell_id), (year, month, cell_lat, cell_lon) |
 | provenance | `method_meta` (m2v_meta.json as `json` text, aliases_used, warnings, files) | 1 | unique (method_version) |
 | provenance | `month_status` (WORLD rows of aoi_month: value_source, data_source, status) | 313 | unique (year, month) |
-| provenance | `satellite_day` (only when satellite_day_status.parquet ships) | 0 | unique (satellite, date) |
+| provenance | `satellite_day` (only when satellite_day_status.parquet ships; v1.2 `date_utc` → `date` by alias, `note` kept, status ok/low/missing/partial/nrt/low_sample) | 0 (v1.2: 28,316) | unique (satellite, date) |
+| provenance | `satellite_month` (migration provenance V2; only when satellite_month_status.parquet ships, v1.2; month_status complete/partial) | 0 (v1.2: 934) | unique (satellite, year, month) |
 | ingest | `release` (state, version, manifest_sha256, data_version, reason_codes/aliases/warnings jsonb), `load_task`, `active_release` (id = 1) | — | unique release_key; partial unique `WHERE state='LOADING'` and `WHERE state='ACTIVE'` |
 | platform | `event_publication`, `event_publication_archive` (Spring Modulith 2.0 JDBC, schema v2) | — | Modulith defaults |
+
+## Release v1.2 (`v1.2-2026-11-15`)
+
+Same folder layout as v1.1 plus:
+
+- `satellite_day_status.parquet`, `satellite_month_status.parquet` — listed in `SHA256SUMS`, optional (absent → as v1.1:
+  `FILE_ABSENT` warning for the day file, nothing for the month file, no `satellite_month` partition and no
+  `provenance.satellite_month` key in `rows`). The day file's extra columns (`n_det_*`, `coverage`, `baseline`, `status_r*`,
+  `seasonal_*` …) are not loaded; `data_source` / `updated_at` stay optional (`COLUMN_ABSENT` warnings). The month table is
+  loaded but no endpoint reads it yet (the v1.2 contract asks for no month-level satellite status).
+- `harmonized_hotspots_static_flags/year=YYYY.parquet` (2000–2026, not in `SHA256SUMS`, not staged): read at query time by
+  `/hotspots` (page, totals, AOI weights, CSV) — points matching a flag row with `is_static_source = true` on
+  (`satellite`, `latitude`, `longitude`, `acq_datetime_utc`) are left out (anti-join, exact equality). Only the flag files of
+  the request's `date_local` years ± 1 are read. Without the folder the queries are unchanged.
+- `harmonized_cell_month` / `harmonized_cell_day` extra columns `static_removed`, `static_removed_lo`, `static_removed_hi`,
+  `static_n_points` are ignored (not loaded, not served). Cell values below 0 are kept (see `NEGATIVE_VALUE` above).
+
+A v1.1 folder (none of these files, no negative values) stages with the same rows and warnings as before.

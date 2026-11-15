@@ -20,6 +20,10 @@ info:
     - `x-status: assumed` = release 에 없어서 가정으로 둔 모양. `x-status: release-absent` = 이 release 로는 503.
     - 예시 숫자는 release 실값(aibox 시제품 서버가 release 를 읽어 2026-11-14 19:12 KST 에 낸 응답에서 옮김). 위성 상태는 release 에 없어 가짜 예시이며 그렇게 표시했다. 점(`/hotspots`) 예시는 v1.1 점 파일(KR fixture) 실값.
 
+    모델 표시 이름 (release v1.2 노트; 코드·id·enum 값·JSON 키는 내부 id 그대로):
+    FireBridge = `m2v_xgb`, FireBridge-Terra = `m2v_xgb_terra`, FireBridge Uncertainty Band = `m2v_q10_q90`, N20 Bridge = `n20_bridge`.
+    FireBridge 성능: 총량 오차 1~2%, 월별 상관 0.97.
+
     알려진 결함·열린 것: `contract/ASSUMPTIONS.md`, `CONFLICTS.md`. 대응표: `contract/MAPPING.md`.
   license:
     name: 내부 초안 (Team Planetarium)
@@ -1083,6 +1087,8 @@ components:
       enum: [modis_m2v_terra, modis_m2v, snpp_observed, n20_bridge, n21_bridge]
       description: |
         값의 출처. 달 단위 경계(release 실측): terra 2000-11~2002-06 · modis_m2v 2002-07~**2012-01** · snpp 2012-02~2026-10 · n20_bridge 2026-11(NOAA-20 × 1.013, 핸드오프 §3).
+        표시 이름: `modis_m2v_terra` = FireBridge-Terra(`m2v_xgb_terra`) 추정, `modis_m2v` = FireBridge(`m2v_xgb`) 추정(구간 = FireBridge Uncertainty Band `m2v_q10_q90`),
+        `n20_bridge` = N20 Bridge. FireBridge 성능: 총량 오차 1~2%, 월별 상관 0.97. 코드값은 그대로.
         `n21_bridge`(NOAA-20 결측일 × 1.053)는 release 0행이지만 핸드오프 코드값이라 계약에 남긴다.
         v0 이름(`modis_harmonized`, `noaa20_bridged`, `modis_harmonized_terra_only`)은 적재기만 받고 응답에는 안 나온다.
         `harmonized_cell_day.parquet` 전용 코드(R-VS1, 적재기가 이 파일에서만 받는다; aoi_month·cell_month 값에는 없다):

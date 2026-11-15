@@ -7,6 +7,6 @@ SELECT count(*) AS total,
        CASE WHEN count(*) FILTER (WHERE is_reference AND weight_hi IS NULL) > 0 THEN NULL
             ELSE coalesce(sum(weight_hi::DOUBLE) FILTER (WHERE is_reference), 0) END AS value_hi,
        count(*) FILTER (WHERE is_reference) AS n_points
-FROM read_parquet([{files}], hive_partitioning = false, union_by_name = true)
+FROM read_parquet([{files}], hive_partitioning = false, union_by_name = true) p{static_antijoin}
 WHERE date_local BETWEEN ?::DATE AND ?::DATE
   AND latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?

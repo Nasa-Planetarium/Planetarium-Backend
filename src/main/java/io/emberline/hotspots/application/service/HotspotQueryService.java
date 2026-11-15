@@ -85,7 +85,9 @@ class HotspotQueryService implements ListHotspotsUseCase {
 
         List<Path> files = port.files(release.releaseKey(), layer, YearMonth.from(start), YearMonth.from(end))
                 .orElseThrow(() -> new DataUnavailableException(ErrorCode.DATA_NOT_LOADED, NOT_READY));
-        HotspotScan scan = new HotspotScan(files, start, end, area.bbox(), area.filter());
+        // flag year = date_local year; the neighbouring year at each end is read too (owner rule)
+        List<Path> flags = port.staticFlagFiles(release.releaseKey(), start.getYear() - 1, end.getYear() + 1);
+        HotspotScan scan = new HotspotScan(files, start, end, area.bbox(), area.filter(), flags);
         String fingerprint = fingerprint(hasBbox ? area.bbox().toString() : query.aoiId(), start, end, layer);
         Optional<PagePosition> after = Optional.ofNullable(query.cursor()).filter(c -> !c.isEmpty())
                 .map(c -> HotspotCursor.decode(c, release.dataVersion(), fingerprint));

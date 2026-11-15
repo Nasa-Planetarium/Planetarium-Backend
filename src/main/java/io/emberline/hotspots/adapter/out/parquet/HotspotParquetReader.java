@@ -48,6 +48,7 @@ import org.springframework.stereotype.Component;
 class HotspotParquetReader implements HotspotQueryPort {
 
     static final String FOLDER = "harmonized_hotspots";
+    static final String FLAGS_FOLDER = "harmonized_hotspots_static_flags";
     private static final SortKey FIRST = new SortKey(null, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, "");
 
     private final Optional<Path> root;
@@ -79,6 +80,22 @@ class HotspotParquetReader implements HotspotQueryPort {
             }
         }
         return Optional.of(out);
+    }
+
+    @Override
+    public List<Path> staticFlagFiles(String releaseKey, int fromYear, int toYear) {
+        Optional<Path> base = folder(releaseKey, FLAGS_FOLDER);
+        if (base.isEmpty()) {
+            return List.of();
+        }
+        List<Path> out = new ArrayList<>();
+        for (int y = fromYear; y <= toYear; y++) {
+            Path f = base.get().resolve("year=" + y + ".parquet");
+            if (Files.isRegularFile(f)) {
+                out.add(f);
+            }
+        }
+        return out;
     }
 
     @Override
@@ -181,8 +198,13 @@ class HotspotParquetReader implements HotspotQueryPort {
     }
 
     private static String sql(String file, HotspotScan scan) {
-        String files = scan.files().stream().map(p -> "'" + p.toString().replace("'", "''") + "'").collect(Collectors.joining(", "));
-        return SqlResource.text("hotspots/" + file).replace("{files}", files);
+        String staticJoin = scan.staticFlags().isEmpty() ? "" : " " + SqlResource.text("hotspots/duck_hotspots_static_antijoin.sql")
+                .replaceAll("(?m)^--[^\\n]*\\n", "").replace("{flag_files}", quoted(scan.staticFlags()));
+        return SqlResource.text("hotspots/" + file).replace("{files}", quoted(scan.files())).replace("{static_antijoin}", staticJoin);
+    }
+
+    private static String quoted(List<Path> paths) {
+        return paths.stream().map(p -> "'" + p.toString().replace("'", "''") + "'").collect(Collectors.joining(", "));
     }
 
     private static Hotspot row(ResultSet rs) throws SQLException {
@@ -210,12 +232,16 @@ class HotspotParquetReader implements HotspotQueryPort {
         return ChronoUnit.MICROS.between(Instant.EPOCH, t);
     }
 
-    /** {@code <root>/<release_key>/harmonized_hotspots}, only if it stays inside the root after resolving links. */
     private Optional<Path> folder(String releaseKey) {
+        return folder(releaseKey, FOLDER);
+    }
+
+    /** {@code <root>/<release_key>/<name>}, only if it stays inside the root after resolving links. */
+    private Optional<Path> folder(String releaseKey, String name) {
         if (root.isEmpty()) {
             return Optional.empty();
         }
-        Path dir = root.get().resolve(releaseKey).resolve(FOLDER).normalize();
+        Path dir = root.get().resolve(releaseKey).resolve(name).normalize();
         if (!dir.startsWith(root.get()) || !Files.isDirectory(dir)) {
             return Optional.empty();
         }

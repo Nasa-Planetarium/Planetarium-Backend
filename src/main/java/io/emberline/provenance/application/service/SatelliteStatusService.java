@@ -81,7 +81,7 @@ class SatelliteStatusService implements GetSatelliteStatusUseCase {
     }
 
     private static SatelliteStatusResponse.Day day(SatelliteDay d) {
-        return new SatelliteStatusResponse.Day(d.date().toString(), d.satellite(), d.status(), d.dataSource());
+        return new SatelliteStatusResponse.Day(d.date().toString(), d.satellite(), d.status(), d.dataSource(), d.note());
     }
 
     private static void check(LocalDate start, LocalDate end) {
