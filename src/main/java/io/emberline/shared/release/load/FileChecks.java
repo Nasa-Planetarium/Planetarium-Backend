@@ -1,6 +1,5 @@
 package io.emberline.shared.release.load;
 
-import io.emberline.shared.release.load.cases.DataCase;
 import io.emberline.shared.release.load.cases.DataCaseRegistry;
 import io.emberline.shared.sql.SqlResource;
 import java.sql.Connection;
@@ -70,14 +69,10 @@ public final class FileChecks {
         }
     }
 
-    /**
-     * Runs a counting query whose columns are data cases (see DataCase) and applies their handlers.
-     * {@code {interval_noise_tolerance}} becomes {@link DataCase#INTERVAL_NOISE_TOLERANCE_TEXT}.
-     */
+    /** Runs a counting query whose columns are data cases (see DataCase) and applies their handlers. */
     public static void dataCases(Connection duck, String file, String fileName, String renderedSql, ValidationReport report)
             throws SQLException {
-        String sql = renderedSql.replace("{interval_noise_tolerance}", DataCase.INTERVAL_NOISE_TOLERANCE_TEXT);
-        try (PreparedStatement ps = duck.prepareStatement(sql)) {
+        try (PreparedStatement ps = duck.prepareStatement(renderedSql)) {
             ps.setString(1, file);
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
