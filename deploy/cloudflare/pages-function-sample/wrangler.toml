@@ -1,0 +1,15 @@
+# Snippet for the frontend repo's wrangler.toml (Pages project emberline, Direct Upload from GitHub Actions).
+# Copy functions/api/v1/[[path]].js into the frontend repo at the same path. No token or account ID belongs here:
+# CI passes CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID from GitHub secrets.
+name = "emberline"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-11-01"
+
+# /api/v1/* → Worker emberline-api (no public route of its own)
+[[services]]
+binding = "API"
+service = "emberline-api"
+
+# Fallback only for previews without the binding (e.g. a fork): an absolute origin base URL.
+# [vars]
+# API_ORIGIN = "https://<preview api origin>"
