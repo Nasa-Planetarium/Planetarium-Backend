@@ -126,7 +126,7 @@ kind: ConfigMap
 metadata: {name: pl-web-conf, namespace: planetarium}
 data:
   # http context (the image's nginx.conf includes conf.d/*.conf). Two listeners:
-  #   8080 LAN    — pl-web (ClusterIP) and pl-web-lan (ServiceLB :18490); static www + /api as before.
+  #   8080 LAN    — pl-web (ClusterIP), reached by pl-web-forward-18490.service; static www + /api as before.
   #   8090 tunnel — pl-web-tunnel (ClusterIP only), reached by the cloudflared connector; public GET/HEAD allowlist.
   # Spring's management port 8081 is proxied by neither listener.
   default.conf: |
@@ -255,22 +255,9 @@ kind: Service
 metadata: {name: pl-web, namespace: planetarium}
 spec: {selector: {app: pl-web}, ports: [{name: lan, port: 8080, targetPort: 8080}]}
 ---
-# LAN entry on the node (replaces pl-web-forward-18490.service): K3s ServiceLB binds :18490 on the node.
-# externalTrafficPolicy Local keeps the client address as nginx $remote_addr.
-apiVersion: v1
-kind: Service
-metadata: {name: pl-web-lan, namespace: planetarium}
-spec:
-  type: LoadBalancer
-  externalTrafficPolicy: Local
-  selector: {app: pl-web}
-  ports: [{name: lan, port: 18490, targetPort: 8080}]
-# NodePort fallback if ServiceLB is disabled (LAN URL becomes http://192.168.0.10:30490):
-# spec:
-#   type: NodePort
-#   externalTrafficPolicy: Local
-#   selector: {app: pl-web}
-#   ports: [{name: lan, port: 8080, targetPort: 8080, nodePort: 30490}]
+# LAN entry: K3s ServiceLB is disabled on aibox (a LoadBalancer Service stays <pending>, no svclb pods), so the LAN
+# entry stays pl-web-forward-18490.service (kubectl port-forward 192.168.0.10:18490 -> Service pl-web:8080). No
+# LoadBalancer or NodePort Service exists: either would open a node port on every host address (docs/DEVIATIONS.md PUB-LAN).
 ---
 # Tunnel listener: ClusterIP only, never NodePort/LoadBalancer. Target of the Workers VPC Service:
 # pl-web-tunnel.planetarium.svc.cluster.local:8090
