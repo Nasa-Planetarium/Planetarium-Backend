@@ -50,7 +50,7 @@ class V12IntervalNoiseTest {
     static final JsonMapper JSON = JsonMapper.builder().build();
     static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     static final Path CORE_V11 = Fixtures.releaseRoot().resolve("core-v11");
-    /** a KR cell of 2025-03 with a band (V12ReleaseTest serves its neighbour through /cells?aoi_id=KR). */
+    /** two KR cells of 2025-03 next to V12ReleaseTest's cell; core-v11 stores lo == hi there, and the rows set both bounds. */
     static final long[] CELLS = cellsNear(4549888L);
     static final long NOISE_CELL = CELLS[0];
     static final long EDGE_CELL = CELLS[1];
@@ -78,14 +78,14 @@ class V12IntervalNoiseTest {
 
     static long[] cellsNear(long cell) {
         List<String> ids = column("SELECT cell_id FROM read_parquet('" + CORE_V11.resolve("harmonized_cell_month.parquet") + "') "
-                + "WHERE year = 2025 AND month = 3 AND value IS NOT NULL AND value_lo < value_hi AND value BETWEEN value_lo AND value_hi "
+                + "WHERE year = 2025 AND month = 3 AND value IS NOT NULL AND value_lo <= value_hi AND value BETWEEN value_lo AND value_hi "
                 + "AND cell_id <> " + cell + " ORDER BY abs(cell_id - " + cell + "), cell_id LIMIT 2");
         assertThat(ids).hasSize(2);
         return new long[] {Long.parseLong(ids.get(0)), Long.parseLong(ids.get(1))};
     }
 
     static int[] krBandMonth() {
-        List<String> ym = column("SELECT year * 100 + month FROM read_parquet('" + CORE_V11.resolve("aoi_month.parquet") + "') "
+        List<String> ym = column("SELECT CAST(year AS INTEGER) * 100 + month FROM read_parquet('" + CORE_V11.resolve("aoi_month.parquet") + "') "
                 + "WHERE aoi_id = 'KR' AND status = 'ok' AND value IS NOT NULL AND value_lo < value - 1 AND value_hi > value + 1 "
                 + "ORDER BY year, month LIMIT 1");
         assertThat(ym).hasSize(1);

@@ -67,7 +67,7 @@ print(r.get("release_key") or "-", v.get("data_version") or "none")')"
 }
 
 # Waits for the load Job by polling its conditions: 0 on Complete, 1 at once on Failed (a rejected stage exits 3 and the
-# Job fails; `kubectl wait --for=condition=complete` never returns on that and hung until its timeout), 1 after the
+# Job fails; a kubectl wait on the complete condition never returns on that and hung until its timeout), 1 after the
 # ceiling. Usage: wait_load_job <job> <ceiling seconds>
 wait_load_job() {
   local job=$1 ceiling=$2 start=$SECONDS conds
