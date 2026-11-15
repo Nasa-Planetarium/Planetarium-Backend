@@ -35,12 +35,17 @@ sync_data_version() {
 try:
     v = json.load(sys.stdin)
 except ValueError:
-    v = {}
+    sys.exit(1)
 r = v.get("release") or {}
 print(r.get("release_key") or "-", v.get("data_version") or "none")')"
-    if [ -z "$want" ] || [ "$key" = "$want" ]; then break; fi
+    # An empty or non-JSON reply (pl-app endpoints not switched yet) leaves key empty: retry, never record "none".
+    if [ -n "$key" ] && { [ -z "$want" ] || [ "$key" = "$want" ]; }; then break; fi
     sleep 5
   done
+  if [ -z "$key" ]; then
+    echo "pl-app /api/v1/version gave no JSON reply; pl-web cache key left unchanged" >&2
+    return 1
+  fi
   if [ -n "$want" ] && [ "$key" != "$want" ]; then
     echo "pl-app does not serve release $want yet (serves $key); pl-web cache key left unchanged" >&2
     return 1
