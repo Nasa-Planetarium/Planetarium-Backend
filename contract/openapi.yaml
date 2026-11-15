@@ -700,7 +700,10 @@ paths:
       operationId: getFirmsWmsTile
       summary: FIRMS WMS 대리 (PNG) — 확장
       description: |
-        `FIRMS_MAP_KEY` 는 서버 환경에만. 응답·로그·오류에 키가 없다(핸드오프 §4.5). 허용 목록 밖 파라미터는 400. 15분 캐시, 상류 예산.
+        `FIRMS_MAP_KEY` 는 서버 환경에만. 응답·로그·오류에 키가 없다(핸드오프 §4.5). 허용 목록 밖 파라미터는 400. 서버 15분 캐시, 상류 예산.
+        응답 `Cache-Control: public, max-age=60, s-maxage=60`, ETag 없음. 상류 예산은 클라이언트 주소마다 몫이 있다
+        (`emberline.firms.budget-per-caller`, 공개 배포 10분에 1500/4500): 몫을 다 쓴 주소의 캐시 미스는 503 upstream_unavailable
+        (`detail` "… busy for this address …"), 다른 주소는 계속 받는다.
       x-handoff-alias:
         path: /firms/wms
         served_at: /api/firms/wms
@@ -746,12 +749,16 @@ components:
       schema: {type: string}
     CacheControlData:
       description: |
-        데이터 경로 = `public, max-age=0, must-revalidate` (판 교체·롤백이 다음 요청에 바로 보이고 304 로 전송량을 아낌 — arch2 §3.8, critique D6).
-        로그인 경로 `private, no-store`. 오류 `no-store`. 정적 자산만 immutable.
+        판에 묶인 데이터 경로(200·304) = `public, max-age=60, s-maxage=600` + ETag(data_version·method_version·경로 틀·정규화 질의·
+        미디어 타입). 공유 캐시(pl-web nginx proxy_cache)는 키 앞에 활성 data_version 을 붙이고 판 교체 때 비우므로 s-maxage 가 판을
+        넘지 않는다. 브라우저는 판 교체 후 최대 60초 이전 판을 볼 수 있다(DEVIATIONS PUB-CACHE).
+        `/version` = `public, max-age=0, s-maxage=5, must-revalidate` (판 교체를 알리는 경로). `/firms/wms-tiles` =
+        `public, max-age=60, s-maxage=60` (판이 아닌 상류 이미지, ETag 없음). 판이 아직 없을 때 `/version` 은 `no-cache`.
+        오류 `no-store`(4xx·5xx 모두, 404 포함). 로그인 경로 `private, no-store`. 정적 자산만 immutable.
         시제품 v3 는 완료 달 86400 · nrt/partial 섞임 300 · /aoi·/method 3600 을 낸다(MAPPING §5 — 정본과 다름).
       schema:
         type: string
-        examples: ['public, max-age=0, must-revalidate']
+        examples: ['public, max-age=60, s-maxage=600', 'public, max-age=0, s-maxage=5, must-revalidate', 'public, max-age=60, s-maxage=60']
     XMethodVersion:
       description: 데이터 판(API 판 아님). 본문 method_version 과 같다.
       required: true
@@ -915,7 +922,12 @@ components:
           schema:
             $ref: '#/components/schemas/Method'
     NotModified:
-      description: If-None-Match 일치
+      description: If-None-Match 일치 — 본문 없음. 200 과 같은 ETag·Cache-Control·X-Method-Version·X-Data-Version·Vary.
+      headers:
+        ETag:
+          $ref: '#/components/headers/ETag'
+        Cache-Control:
+          $ref: '#/components/headers/CacheControlData'
     BadRequest:
       description: 입력 오류 (invalid_param · range_too_large · polygon_too_complex)
       headers:
@@ -987,6 +999,10 @@ components:
         - `heavy`: `/cells`·`/hotspots`(+별칭) 1 — 기본 분당 30.
         - `tiles`: `/firms/wms-tiles`·`/api/firms/wms` 1 — 기본 분당 240(지도 한 번 이동·확대 = 타일 12–20장). 상류 FIRMS 키는
           따로 `emberline.firms.budget-*` 예산(기본 10분에 4500, 캐시 미스만).
+        - `global`: 모든 /api 요청 1, **모든 클라이언트 합계**(파드 단위 통) — 기본 처음 2000, 초당 700 채움. `ip` 다음에 잰다.
+        공개 배포(NAT 한 주소 뒤 검토자 약 200명)는 `ip` 처음 1000·초당 500, `heavy` 분당 3600, `tiles` 분당 24000 으로 올린다
+        (deploy/k8s/planetarium-app.yaml, DEVIATIONS PUB-RL). 클라이언트 주소 = 신뢰 프록시(pl-web)가 준 X-Forwarded-For.
+        이 응답은 `Cache-Control: no-store`.
       headers:
         Retry-After:
           $ref: '#/components/headers/RetryAfter'

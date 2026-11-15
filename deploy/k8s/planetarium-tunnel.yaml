@@ -1,0 +1,28 @@
+# Dedicated Cloudflare Tunnel connector for EMBERLINE (separate from the flexday and agtt connectors). Owner-applied.
+# The tunnel is remotely managed: the token comes from Secret emberline-tunnel (key: token), created out of band and
+# never printed. The tunnel has no public hostname; the Workers VPC Service routes to
+# pl-web-tunnel.planetarium.svc.cluster.local:8090 through it (deploy/PUBLIC.md). NetworkPolicy pl-web-ingress admits
+# 8090 only from pods labelled app=emberline-tunnel.
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: emberline-tunnel, namespace: planetarium}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: emberline-tunnel}}
+  template:
+    metadata: {labels: {app: emberline-tunnel}}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 65532, runAsGroup: 65532}
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:2026.10.3
+          imagePullPolicy: IfNotPresent
+          args: ["tunnel", "--no-autoupdate", "run"]
+          env:
+            - {name: TUNNEL_TOKEN, valueFrom: {secretKeyRef: {name: emberline-tunnel, key: token}}}
+            - {name: TUNNEL_METRICS, value: "0.0.0.0:2000"}
+          ports: [{name: metrics, containerPort: 2000}]
+          readinessProbe: {httpGet: {path: /ready, port: 2000}, periodSeconds: 10, failureThreshold: 3}
+          livenessProbe: {httpGet: {path: /ready, port: 2000}, initialDelaySeconds: 30, periodSeconds: 30, failureThreshold: 5}
+          resources: {requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: "1", memory: 256Mi}}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}

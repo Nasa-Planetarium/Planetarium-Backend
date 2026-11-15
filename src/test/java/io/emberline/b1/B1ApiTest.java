@@ -283,7 +283,7 @@ class B1ApiTest extends AppTestBase {
     void b1_15_etagRevalidation() {
         HttpResponse<String> first = get("/api/v1/aois?level=country");
         assertThat(first.statusCode()).isEqualTo(200);
-        assertThat(first.headers().firstValue("Cache-Control")).hasValue("public, max-age=0, must-revalidate");
+        assertThat(first.headers().firstValue("Cache-Control")).hasValue("public, max-age=60, s-maxage=600");
         assertThat(first.headers().firstValue("Vary")).hasValue("Accept, Accept-Language");
         assertThat(first.headers().firstValue("X-Data-Version")).isPresent();
         String etag = first.headers().firstValue("ETag").orElseThrow();

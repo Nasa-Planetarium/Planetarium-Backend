@@ -1,0 +1,8 @@
+{
+  "name": "emberline-pages-function-sample",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}
