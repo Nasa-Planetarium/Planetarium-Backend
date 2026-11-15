@@ -22,7 +22,7 @@ public record SatelliteStatusResponse(String start, String end, String granulari
                         List<String> satellites) {
     }
 
-    /** One satellite-day (only from satellite_day_status). */
-    public record Day(String date, String satellite, String status, String dataSource) {
+    /** One satellite-day (only from satellite_day_status): satellite, status and note as the file has them. */
+    public record Day(String date, String satellite, String status, String dataSource, String note) {
     }
 }

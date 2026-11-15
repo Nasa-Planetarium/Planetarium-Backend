@@ -15,6 +15,11 @@ public enum DataCase {
     VALUE_OUTSIDE_INTERVAL,
     /** value_lo greater than value_hi → reject. */
     INTERVAL_INVERTED,
-    /** a negative value, bound or raw count → reject. */
-    NEGATIVE_VALUE
+    /**
+     * a negative value or bound (v1.2 static-source removal leaves some cells slightly below 0, release note "draw as 0"):
+     * kept as the file has it (A1), noted.
+     */
+    NEGATIVE_VALUE,
+    /** a negative raw count (raw_modis, raw_viirs, n_cells) → reject. */
+    NEGATIVE_COUNT
 }

@@ -46,7 +46,8 @@ class ProvenanceJdbcRepository implements ProvenanceReadPort {
                 .query((rs, n) -> {
                     Timestamp up = rs.getTimestamp("updated_at");
                     return new SatelliteDay(rs.getString("satellite"), rs.getObject("date", LocalDate.class),
-                            rs.getString("status"), rs.getString("data_source"), up == null ? null : up.toInstant());
+                            rs.getString("status"), rs.getString("data_source"), up == null ? null : up.toInstant(),
+                            rs.getString("note"));
                 }).list());
     }
 

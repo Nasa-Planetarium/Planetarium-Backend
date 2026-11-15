@@ -4,7 +4,7 @@
 SELECT latitude, longitude, epoch_us(acq_datetime_utc) AS acq_us, CAST(date_local AS VARCHAR) AS date_local,
        satellite, instrument, frp, confidence, daynight, cell_id, adm0_a3, adm1_code, harmonized_weight,
        weight_lo, weight_hi, weight_source, is_reference, source, method_version
-FROM read_parquet([{files}], hive_partitioning = false, union_by_name = true)
+FROM read_parquet([{files}], hive_partitioning = false, union_by_name = true) p{static_antijoin}
 WHERE date_local BETWEEN ?::DATE AND ?::DATE
   AND latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?
   AND (epoch_us(acq_datetime_utc), latitude, longitude, satellite) >= (?, ?, ?, ?)

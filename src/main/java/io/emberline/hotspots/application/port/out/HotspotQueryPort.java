@@ -19,6 +19,12 @@ public interface HotspotQueryPort {
      */
     Optional<List<Path>> files(String releaseKey, Layer layer, YearMonth from, YearMonth to);
 
+    /**
+     * Existing {@code harmonized_hotspots_static_flags/year=YYYY.parquet} files for {@code fromYear..toYear} (the flag
+     * year is the date_local year); empty when the release has no flag folder.
+     */
+    List<Path> staticFlagFiles(String releaseKey, int fromYear, int toYear);
+
     /** Count of every matching point and the reference sum over them (regardless of any page). */
     Totals totals(HotspotScan scan);
 
