@@ -1,4 +1,4 @@
-package io.emberline.acceptance.layers;
+package io.emberline.acceptance.s5layers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;

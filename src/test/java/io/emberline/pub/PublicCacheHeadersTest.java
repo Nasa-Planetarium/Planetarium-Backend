@@ -36,7 +36,7 @@ class PublicCacheHeadersTest extends AppTestBase {
             "/api/v1/methods/current");
     // /api/v1/satellite-status left PINNED — it is @LayerCached now
     // (public, max-age=0, s-maxage=3600, must-revalidate) and answers 503 on core, which ships no satellite files;
-    // its layer headers, ETag and 304 are pinned by io.emberline.acceptance.layers.NewLayerApiTest (L3-7) on the v1.2 files.
+    // its layer headers, ETag and 304 are pinned by io.emberline.acceptance.s5layers.NewLayerApiTest (L3-7) on the v1.2 files.
 
     Path root;
     String coreEtag;
