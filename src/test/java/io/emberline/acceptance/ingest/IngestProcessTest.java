@@ -1,4 +1,4 @@
-package io.emberline.b1;
+package io.emberline.acceptance.ingest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,7 +17,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /** The real entry point in a child JVM: exit codes and "the last stdout line is the JSON outcome". */
-class B1ProcessTest {
+class IngestProcessTest {
 
     record Run(int exit, String lastLine) {
     }

@@ -1,7 +1,7 @@
-package io.emberline.b2;
+package io.emberline.acceptance.read;
 
-import static io.emberline.b2.B2Support.num;
-import static io.emberline.b2.B2Support.text;
+import static io.emberline.acceptance.read.ReadSupport.num;
+import static io.emberline.acceptance.read.ReadSupport.text;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
@@ -39,19 +39,19 @@ import org.springframework.test.context.TestPropertySource;
 import tools.jackson.databind.JsonNode;
 
 /**
- * B2 over real HTTP: owner fixture core-v11 (release v1.1, real values) staged as {@code v11} with one change — the
- * name of SIDO_11 is {@code =1+2} (B2.08 formula guard) — then the v1 fixture {@code core} for the switch (B2.17).
- * Expected numbers come from the release files (DuckDB), never from our code (A1).
+ * over real HTTP: owner fixture core-v11 (release v1.1, real values) staged as {@code v11} with one change — the
+ * name of SIDO_11 is {@code =1+2} ( formula guard) — then the v1 fixture {@code core} for the switch.
+ * Expected numbers come from the release files (DuckDB), never from our code.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestPropertySource(properties = {"emberline.release.poll-interval=1s", "emberline.harmonized.cache.retry-after=200ms",
         "emberline.harmonized.cache.env=test"})
-class B2ApiTest extends B2AppBase {
+class ReadApiTest extends ReadAppBase {
 
     static final String MV = "v1-m2v-2026-11-14";
     static final EmbeddedRedis REDIS = new EmbeddedRedis().start();
-    B2Support.Keys keys;
+    ReadSupport.Keys keys;
 
     @DynamicPropertySource
     static void b2(DynamicPropertyRegistry registry) {
@@ -60,7 +60,7 @@ class B2ApiTest extends B2AppBase {
 
     @BeforeAll
     void activateV11() throws Exception {
-        keys = new B2Support.Keys(REDIS.url());
+        keys = new ReadSupport.Keys(REDIS.url());
         IngestCli.Result staged = IngestCli.run(jdbcUrl, ROOT, "stage", "v11");
         assertThat(staged.exit()).as(staged.json().toString()).isZero();
         IngestCli.Result active = IngestCli.run(jdbcUrl, ROOT, "activate", "v11", "--expect-sha256", V11Fixtures.manifestSha(ROOT, "v11"));
@@ -185,7 +185,7 @@ class B2ApiTest extends B2AppBase {
     }
 
     static void assertCalendarMatches(JsonNode body, Path dir, boolean v11, String aoi, int from, int to) {
-        List<List<Object>> rows = B2Support.monthRows(dir, v11, aoi, from, to);
+        List<List<Object>> rows = ReadSupport.monthRows(dir, v11, aoi, from, to);
         JsonNode months = body.get("months");
         assertThat(months.size()).isEqualTo((to - from + 1) * 12);
         assertThat(rows).hasSize(months.size());
@@ -280,7 +280,7 @@ class B2ApiTest extends B2AppBase {
         JsonNode s = ok("/api/v1/aois/KR/summary?start=2024-01-01&end=2025-12-31&freq=month");
         assertThat(s.get("freq").asString()).isEqualTo("month");
         assertThat(s.get("start").asString()).isEqualTo("2024-01-01");
-        List<List<Object>> rows = B2Support.monthRows(V11, true, "KR", 2024, 2025);
+        List<List<Object>> rows = ReadSupport.monthRows(V11, true, "KR", 2024, 2025);
         JsonNode series = s.get("series");
         assertThat(series.size()).isEqualTo(24);
         double total = 0;
@@ -475,7 +475,7 @@ class B2ApiTest extends B2AppBase {
             Thread.sleep(500);
         }
         keys.close();
-        keys = new B2Support.Keys(REDIS.url());
+        keys = new ReadSupport.Keys(REDIS.url());
         assertThat(get("/api/v1/aois/KR/calendar?start_year=2024&end_year=2025").statusCode()).isEqualTo(200);
     }
 
@@ -565,7 +565,7 @@ class B2ApiTest extends B2AppBase {
         assertThat(m3.get("value").doubleValue()).isCloseTo(dayPart + residual * 22 / 31, within(1e-6));
         JsonNode m4 = month.get("series").get(1);
         assertThat(m4.get("basis").asString()).isEqualTo("aoi_month");
-        assertThat(m4.get("value").doubleValue()).isEqualTo(((Number) B2Support.monthRows(V11, true, "KR", 2005, 2005).get(3).get(2)).doubleValue());
+        assertThat(m4.get("value").doubleValue()).isEqualTo(((Number) ReadSupport.monthRows(V11, true, "KR", 2005, 2005).get(3).get(2)).doubleValue());
     }
 
     @Test
@@ -620,7 +620,7 @@ class B2ApiTest extends B2AppBase {
                 "/api/v1/aois/{aoiId}/summary")) {
             Set<String> served = new TreeSet<>();
             doc.get("paths").get(p).get("get").get("parameters").forEach(n -> served.add(n.get("in").asString() + ":" + n.get("name").asString()));
-            assertThat(served).as(p).isEqualTo(B2Support.contractParams(p.substring("/api/v1".length())));
+            assertThat(served).as(p).isEqualTo(ReadSupport.contractParams(p.substring("/api/v1".length())));
         }
         doc.get("paths").properties().forEach(e -> assertThat(e.getKey()).startsWith("/api/v1/"));
     }
@@ -682,7 +682,7 @@ class B2ApiTest extends B2AppBase {
             assertThat(nov.get("flags").toString()).as(range).contains("partial_range");
         }
         // a full past month (as_of_date null) is unchanged; cutting its last day is cell_day
-        double march = ((Number) B2Support.monthRows(V11, true, "KR", 2025, 2025).get(2).get(2)).doubleValue();
+        double march = ((Number) ReadSupport.monthRows(V11, true, "KR", 2025, 2025).get(2).get(2)).doubleValue();
         JsonNode full = ok("/api/v1/aois/KR/summary?start=2025-03-01&end=2025-03-31&freq=month").get("series").get(0);
         assertThat(full.get("basis").asString()).isEqualTo("aoi_month");
         assertThat(full.get("value").doubleValue()).isEqualTo(march);

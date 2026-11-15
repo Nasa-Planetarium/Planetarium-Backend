@@ -5,7 +5,7 @@ import io.emberline.observation.domain.CellCase;
 import io.emberline.observation.domain.CellRow;
 import org.springframework.stereotype.Component;
 
-/** E3: value outside [value_lo, value_hi] — values kept as the file has them, the interval is flagged as not usable. */
+/** value outside [value_lo, value_hi] — values kept as the file has them, the interval is flagged as not usable. */
 @Component
 class OutsideIntervalHandler implements CellCaseHandler {
 

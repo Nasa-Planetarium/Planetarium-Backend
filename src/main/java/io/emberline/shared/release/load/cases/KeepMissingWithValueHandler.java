@@ -2,7 +2,7 @@ package io.emberline.shared.release.load.cases;
 
 import io.emberline.shared.release.load.ValidationReport;
 
-/** A1: status missing with a value — stored as the file has it; the read side shows status missing. */
+/** status missing with a value — stored as the file has it; the read side shows status missing. */
 public final class KeepMissingWithValueHandler implements DataCaseHandler {
 
     @Override

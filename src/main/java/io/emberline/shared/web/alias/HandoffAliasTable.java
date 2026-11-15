@@ -8,8 +8,8 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /**
- * contract/handoff-aliases.md as code. Each later packet adds its rows here (B2: /api/calendar, /api/compare,
- * /api/summary (aoi_id; bbox since pl-sum), /api/export.csv type=calendar|summary, type=hotspots since pl-fix2; B3: /api/hotspots, /api/cells; B4: /api/firms/wms;
+ * contract/handoff-aliases.md as code. Each later work item adds its rows here (/api/calendar, /api/compare,
+ * /api/summary (aoi_id; bbox since pl-sum), /api/export.csv type=calendar|summary, type=hotspots since pl-fix2; /api/hotspots, /api/cells; /api/firms/wms;
  * /api/occurrence — {@code unit=grid} → the grid, {@code aoi} or {@code aoi_id} → the AOI;
  * /api/events, /api/fwi, /api/spread, /api/regime with {@code aoi} or {@code aoi_id};
  * POST /api/forecast, body unchanged) — no alias controllers.

@@ -27,7 +27,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 /**
- * The 0.5° grid as the file has it (A1: nothing recomputed). {@code bbox} keeps the cells whose centre lies in the box
+ * The 0.5° grid as the file has it (nothing recomputed). {@code bbox} keeps the cells whose centre lies in the box
  * (absent = the whole grid, 52,855 cells), {@code min_p_any} drops cells below it, {@code fields} picks the cell shape
  * and display rounding. A box with no cell at all answers {@code coverage.available=false, reason=no_cells} (cells
  * absent from the file are "not a target", MAPPING §8.3); cells present but all below {@code min_p_any} answer an

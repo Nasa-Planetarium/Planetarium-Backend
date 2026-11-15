@@ -10,7 +10,11 @@ LOAD=""
 SHA=$(git -C "$W" rev-parse --short=8 HEAD)
 IMG=planetarium-backend:$SHA
 SLUG=$(echo "${LOAD:-none}" | tr '.' '-')-$SHA
-export KUBECONFIG=$HOME/.kube/omb-k3s.yaml
+# The cluster's kubeconfig: PL_KUBECONFIG from the untracked env file (see deploy/render.sh), else KUBECONFIG.
+env_file=${PL_DEPLOY_ENV:-$HOME/planetarium/deploy.env}
+# shellcheck source=/dev/null
+[ -r "$env_file" ] && . "$env_file"
+export KUBECONFIG=${PL_KUBECONFIG:-${KUBECONFIG:?set PL_KUBECONFIG in the env file or KUBECONFIG}}
 NS=planetarium
 docker build -q -f "$W/deploy/docker/Dockerfile" -t "$IMG" "$W"
 docker save "$IMG" | sudo -n k3s ctr images import - >/dev/null

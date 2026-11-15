@@ -1,4 +1,4 @@
-# Ingest and database layout (B1)
+# Ingest and database layout
 
 ## Commands (real release `v1-m2v-2026-11-14`)
 
@@ -8,14 +8,14 @@ Environment only — no files with secrets:
 export SPRING_DATASOURCE_URL=jdbc:postgresql://<host>:5432/<db>
 export SPRING_DATASOURCE_USERNAME=<user>
 export SPRING_DATASOURCE_PASSWORD=<password>
-export EMBERLINE_RELEASE_ROOT=/path/to/releases          # contains v1-m2v-2026-11-14/ with the 6 files + SHA256SUMS
+export EMBERLINE_RELEASE_ROOT=/path/to/releases # contains v1-m2v-2026-11-14/ with the 6 files + SHA256SUMS
 
-java -jar build/libs/emberline.jar --spring.profiles.active=flyway                       # exit 0; idempotent
+java -jar build/libs/emberline.jar --spring.profiles.active=flyway # exit 0; idempotent
 java -Xmx1536m -jar build/libs/emberline.jar --spring.profiles.active=ingest stage v1-m2v-2026-11-14
-sha256sum "$EMBERLINE_RELEASE_ROOT/v1-m2v-2026-11-14/SHA256SUMS"                          # the separate-channel hash
+sha256sum "$EMBERLINE_RELEASE_ROOT/v1-m2v-2026-11-14/SHA256SUMS" # the separate-channel hash
 java -jar build/libs/emberline.jar --spring.profiles.active=ingest activate v1-m2v-2026-11-14 --expect-sha256 <hex>
 java -jar build/libs/emberline.jar --spring.profiles.active=ingest show v1-m2v-2026-11-14
-java -jar build/libs/emberline.jar                                                         # API :8080, actuator :8081
+java -jar build/libs/emberline.jar # API :8080, actuator :8081
 ```
 
 Exit codes: 0 ok · 3 RELEASE_INVALID / RELEASE_KEY_INVALID · 4 RELEASE_HASH_MISMATCH · 5 RELEASE_STATE_CONFLICT · 1 unexpected.
@@ -36,16 +36,16 @@ parsable, every needed file present (required) and listed with a matching sha256
 columns and kinds (aliases `name→name_ko`, `parent_aoi→parent_id`, v0 column names), code values (level
 `kr/sido/sgg` → `country/kr_sido/kr_sgg`; value_source v0 names → v1, reported in `aliases_used`), duplicate keys
 (cells: by the unique index after COPY), and data cases through `DataCaseRegistry` (one handler class per case):
-`MISSING_MONTH_NULL_VALUE` keep NULL (E2) · `MISSING_MONTH_WITH_VALUE` keep · `VALUE_OUTSIDE_INTERVAL` keep (E3) ·
+`MISSING_MONTH_NULL_VALUE` keep NULL · `MISSING_MONTH_WITH_VALUE` keep · `VALUE_OUTSIDE_INTERVAL` keep ·
 `NEGATIVE_VALUE` (value / value_lo / value_hi < 0, v1.2) keep as stored, warning `NEGATIVE_VALUE:<file>:<n> rows kept as
 stored; drawn as 0` · `INTERVAL_INVERTED` (value_lo > value_hi, both bounds finite, any size; v1.2: 8,162 cell-month and
 8 aoi-month rows, at most 1.7e-5) keep as stored, warning `INTERVAL_INVERTED:<file>:<n> rows kept as stored`; the read
-side serves value / value_lo / value_hi as stored, never reordered, clamped or nulled (E3 `interval_out_of_range` only
+side serves value / value_lo / value_hi as stored, never reordered, clamped or nulled (`interval_out_of_range` only
 flags a value outside its band), and the display rule (lo = min(lo, hi, value), hi = max(lo, hi,
 value), no band when lo is null) belongs to the front · `NULL_VALUE_NOT_MISSING` / `INTERVAL_INVERTED_NOT_FINITE`
 (value_lo > value_hi with a NaN or infinite bound) / `NEGATIVE_COUNT` (raw_modis, raw_viirs,
 n_cells < 0) reject. A rejected release leaves no partitions and
-does not touch the active release. Values are copied as the files have them (A1).
+does not touch the active release. Values are copied as the files have them.
 
 ## Schemas, tables, partitions, indexes
 
@@ -85,7 +85,7 @@ Same folder layout as v1.1 plus:
 - `harmonized_cell_month` / `harmonized_cell_day` extra columns `static_removed`, `static_removed_lo`, `static_removed_hi`,
   `static_n_points` are ignored (not loaded, not served). Cell values below 0 are kept (see `NEGATIVE_VALUE` above).
 
-- `grid_occurrence_nextmonth_latest.parquet`, `aoi_occurrence_nextmonth_latest.parquet` (F15 outlook, optional, listed in
+- `grid_occurrence_nextmonth_latest.parquet`, `aoi_occurrence_nextmonth_latest.parquet` (outlook, optional, listed in
   `SHA256SUMS` when present) → `outlook.grid_occurrence` / `outlook.aoi_occurrence`, `rows` keys
   `outlook.grid_occurrence` / `outlook.aoi_occurrence`. Rejected: a missing served column (`COLUMN_MISSING`), a null in a
   served non-null column (`NULL_VALUE`), NaN or infinity (`NOT_FINITE`), more than one `target_month` / `as_of_date`
@@ -115,7 +115,7 @@ cannot be staged as is. The owner assembles the stage folder from it by hardlink
 ```
 deploy/release/assemble.sh --hotspots-from "$EMBERLINE_RELEASE_ROOT/<previous stage folder>" \
     [--extra-from <folder of re-published files>] <download folder> "$EMBERLINE_RELEASE_ROOT/<new key>"
-sha256sum "$EMBERLINE_RELEASE_ROOT/<new key>/SHA256SUMS"                                  # the activate hash
+sha256sum "$EMBERLINE_RELEASE_ROOT/<new key>/SHA256SUMS" # the activate hash
 ```
 
 1. every `release_manifest.csv` entry is linked at its listed path (top level, `models/`, `reports/`), plus the manifest;

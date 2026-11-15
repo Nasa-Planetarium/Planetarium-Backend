@@ -2,7 +2,7 @@
 # Fill a manifest's host placeholders and print it, so host values never enter the repository. __HOST_HOME__ becomes
 # $HOME; __LAN_ORIGIN__ becomes PL_LAN_ORIGIN (the LAN browser origin, http://<HOST_IP>:<LAN_PORT>) from the untracked
 # env file ${PL_DEPLOY_ENV:-$HOME/planetarium/deploy.env}. Refuses when the value is unset or a placeholder is left.
-# Usage: deploy/render.sh <manifest|-> | kubectl apply -f -   (deploy.sh pipes planetarium-app.yaml through it)
+# Usage: deploy/render.sh <manifest|-> | kubectl apply -f - (deploy.sh pipes planetarium-app.yaml through it)
 set -euo pipefail
 env_file=${PL_DEPLOY_ENV:-$HOME/planetarium/deploy.env}
 [ -r "$env_file" ] || { echo "render: $env_file is missing (it sets PL_LAN_ORIGIN)" >&2; exit 2; }

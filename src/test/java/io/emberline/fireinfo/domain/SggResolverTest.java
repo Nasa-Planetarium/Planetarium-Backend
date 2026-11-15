@@ -6,7 +6,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * P2-1 (unit): the MAPPING §8.4 rule on a small SGG list shaped like aoi_list — a unique name resolves
+ * L2-1 (unit): the MAPPING §8.4 rule on a small SGG list shaped like aoi_list — a unique name resolves
  * whatever the event's sido_nm (border crossing), a homonym only through the parent SIDO, anything else is dropped and
  * counted. The fixture-wide check is FireInfoApiTest.p2_1.
  */

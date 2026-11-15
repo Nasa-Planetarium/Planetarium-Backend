@@ -1,12 +1,12 @@
 #!/bin/bash
 # Build the FireOutlook Planner service image from the model repo at the pinned commit into the local docker.
 # Usage: deploy/forecast/build.sh <model-commit> [<model-repo-dir>]
-#   <model-commit>    must resolve to the pinned commit below (model repo main c43368c)
-#   <model-repo-dir>  a checkout that has the commit; default $PL_MODEL_REPO. Only read (git archive), never changed.
+# <model-commit> must resolve to the pinned commit below (model repo main c43368c)
+# <model-repo-dir> a checkout that has the commit; default $PL_MODEL_REPO. Only read (git archive), never changed.
 # Tags planetarium-forecast:<commit7> (the tag deploy/k8s/planetarium-forecast.yaml runs) and
 # planetarium-forecast:<commit7>-<this repo HEAD sha8> (to roll back to).
 # The k3s import is the owner's step (deploy/forecast/README.md):
-#   docker save planetarium-forecast:c43368c | sudo -n k3s ctr images import -
+# docker save planetarium-forecast:c43368c | sudo -n k3s ctr images import -
 set -euo pipefail
 PINNED=c43368c62bd8253879c0547527bdb9441b36aa1a
 COMMIT=${1:?usage: build.sh <model-commit> [<model-repo-dir>]}

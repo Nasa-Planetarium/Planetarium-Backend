@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Summary of the 0.5° cells of an AOI (contract schema {@code GridSummary}) — not a regional probability (A1: no
+ * Summary of the 0.5° cells of an AOI (contract schema {@code GridSummary}) — not a regional probability (no
  * combining of cell probabilities). Persistent-source cells are counted in {@code nPersistent} only; every other
  * number is over the remaining cells: {@code nCells} = their count = the sum of the bands (screen colour steps
  * &lt; 10 %, 10–40 %, 40–70 %, ≥ 70 % of p_any), the maximum and the median p_any. The median of an even count is the

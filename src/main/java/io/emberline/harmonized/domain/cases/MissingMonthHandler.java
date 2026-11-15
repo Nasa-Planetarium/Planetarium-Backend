@@ -3,7 +3,7 @@ package io.emberline.harmonized.domain.cases;
 import io.emberline.harmonized.domain.Reading;
 import io.emberline.harmonized.domain.Status;
 
-/** E2 「null 은 우리가 해결한다」: a missing month is served as missing with null numbers, never painted as 0. */
+/** 「null 은 우리가 해결한다」: a missing month is served as missing with null numbers, never painted as 0. */
 public final class MissingMonthHandler implements ReadCaseHandler {
 
     @Override

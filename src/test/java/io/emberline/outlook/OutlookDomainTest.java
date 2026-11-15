@@ -12,7 +12,7 @@ import io.emberline.outlook.domain.VsNormal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** rules without Spring: vs_normal boundary (P1-9), rank, grid summary, bbox, display rounding. */
+/** rules without Spring: vs_normal boundary (L1-9), rank, grid summary, bbox, display rounding. */
 class OutlookDomainTest {
 
     @Test

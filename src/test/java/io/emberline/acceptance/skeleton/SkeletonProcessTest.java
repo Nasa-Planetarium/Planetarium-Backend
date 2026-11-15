@@ -1,4 +1,4 @@
-package io.emberline.b0;
+package io.emberline.acceptance.skeleton;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -18,8 +18,8 @@ import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 
-/** B0.10 (CORS '*' exits non-zero) and B0.11–B0.12 (flyway profile) through the real main() in a child JVM. */
-class B0ProcessTest {
+/** (CORS '*' exits non-zero) and – (flyway profile) through the real main() in a child JVM. */
+class SkeletonProcessTest {
 
     static int runMain(String... args) throws Exception {
         String javaBin = Path.of(System.getProperty("java.home"), "bin", "java").toString();

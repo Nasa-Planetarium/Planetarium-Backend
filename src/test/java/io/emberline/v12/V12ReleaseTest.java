@@ -228,7 +228,7 @@ class V12ReleaseTest {
     void realSatelliteDayStatusStagesAndStatusServesItsDaysAndNotes() throws SQLException {
         assertThat(v12.aliases()).contains("date_utc->date");
         assertThat(scalar("SELECT count(*) FROM provenance.satellite_day WHERE release_id = " + releaseId("v12"))).isEqualTo("4");
-        // the contract SatelliteStatus shape (freq, days[] with date_utc, months[]); full rows are P3-6
+        // the contract SatelliteStatus shape (freq, days[] with date_utc, months[]); full rows are L3-6
         JsonNode s = json(get("/api/v1/satellite-status?start=2026-11-12&end=2026-11-14"));
         assertThat(s.get("freq").asString()).isEqualTo("day");
         assertThat(s.get("through").asString()).isEqualTo("2026-11-14");
@@ -287,7 +287,7 @@ class V12ReleaseTest {
     }
 
     /**
-     * F3 / criterion 12: {@code Method.display_names} (internal id → screen name) = the contract's
+     * / criterion 12: {@code Method.display_names} (internal id → screen name) = the contract's
      * {@code info.x-display-names} without its {@code description} / {@code performance_copy} keys, and
      * {@code Method.performance_copy} = that {@code performance_copy}; on /methods/current and /methods/{v}. The values
      * the method lists stay internal ids. The release carries neither field (DEVIATIONS).

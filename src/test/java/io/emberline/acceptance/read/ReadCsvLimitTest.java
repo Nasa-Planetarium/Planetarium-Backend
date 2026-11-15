@@ -1,4 +1,4 @@
-package io.emberline.b2;
+package io.emberline.acceptance.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,11 +10,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.test.context.TestPropertySource;
 
-/** B2.12 with emberline.limits.csv-rows=10 (as the harness sets it); Redis unreachable on purpose (DB answers). */
+/** with emberline.limits.csv-rows=10 (as the harness sets it); Redis unreachable on purpose (DB answers). */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestPropertySource(properties = {"emberline.limits.csv-rows=10", "emberline.release.poll-interval=1s",
         "emberline.harmonized.cache.url=redis://127.0.0.1:1"})
-class B2CsvLimitTest extends B2AppBase {
+class ReadCsvLimitTest extends ReadAppBase {
 
     @BeforeAll
     void activate() throws Exception {

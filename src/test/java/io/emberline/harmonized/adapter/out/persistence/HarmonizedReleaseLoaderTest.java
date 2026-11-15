@@ -39,7 +39,7 @@ class HarmonizedReleaseLoaderTest {
         Map<String, Object> schema = Contract.at("components", "schemas", "ValueSource");
         Set<String> contract = new TreeSet<>((List<String>) schema.get("enum"));
         // Spec 272aedb dropped ValueSource.x-cell-day-only and its R-VS1 text; the list did not change, so the loader
-        // (ruling R-VS1, 00-decisions E1 「the file is canonical」) holds it: its codes beyond the contract enum.
+        // (ruling R-VS1, 「the file is canonical」) holds it: its codes beyond the contract enum.
         Set<String> cellDayOnly = new TreeSet<>(HarmonizedReleaseLoader.CELL_DAY_SOURCES);
         cellDayOnly.removeAll(contract);
         assertThat(cellDayOnly).containsExactlyInAnyOrder("modis_m2v_background", "modis_fallback_m2v_predicted");

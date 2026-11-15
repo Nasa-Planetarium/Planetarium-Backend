@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
-/** B0.17 — the ErrorCode enum is the contract's x-error-catalog, numbered DSSNN, titled in ko and en, carded in docs/errors. */
+/** the ErrorCode enum is the contract's x-error-catalog, numbered DSSNN, titled in ko and en, carded in docs/errors. */
 class ErrorCodeInvariantTest {
 
     static final Set<Integer> BANDS = Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9);

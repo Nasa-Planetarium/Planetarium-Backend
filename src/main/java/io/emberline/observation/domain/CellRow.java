@@ -3,7 +3,7 @@ package io.emberline.observation.domain;
 import java.time.LocalDate;
 
 /**
- * One row of observation.cell_month as loaded (values copied from harmonized_cell_month.parquet, A1).
+ * One row of observation.cell_month as loaded (values copied from harmonized_cell_month.parquet).
  * {@code cellLat}/{@code cellLon} are the file's float32 centers. {@code valueProjected}/{@code asOfDate} are set on
  * partial (month in progress) rows of a v1.1 release only.
  */

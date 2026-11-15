@@ -57,9 +57,9 @@ public class ReleaseManifestCheck {
     }
 
     /**
-     * @param dir         the release folder (already resolved inside the release root)
+     * @param dir the release folder (already resolved inside the release root)
      * @param loaderFiles names of the files the loaders read (see {@link ReleaseLoader#files()})
-     * @param sha256      hex sha256 of a file (memoised by the caller)
+     * @param sha256 hex sha256 of a file (memoised by the caller)
      */
     public void check(Path dir, Collection<String> loaderFiles, Function<Path, String> sha256, ValidationReport report) {
         Path csv = dir.resolve(FILE);

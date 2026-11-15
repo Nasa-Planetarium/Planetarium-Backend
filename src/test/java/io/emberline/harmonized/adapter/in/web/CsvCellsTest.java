@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-/** B2.08 cell rules: formula guard on text cells only; numbers unchanged; RFC 4180 quoting. */
+/** cell rules: formula guard on text cells only; numbers unchanged; RFC 4180 quoting. */
 class CsvCellsTest {
 
     @Test

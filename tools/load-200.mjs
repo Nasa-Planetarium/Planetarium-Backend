@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Browsing-profile load (pl-pub item 2) with Node built-ins only.
-//   node tools/load-200.mjs <base-url> [--users 200] [--seconds 300] [--seed 42] [--json]
+// node tools/load-200.mjs <base-url> [--users 200] [--seconds 300] [--seed 42] [--json]
 // Each user arrives within the first 10 s (or the run, if shorter), then views a page every 10 s (6 API calls, 2 of
 // them heavy) and pans the map every 15 s from 2 s after arrival (20 FIRMS tiles out of 30 viewports). Open loop:
 // the schedule does not wait for answers. Reports requests, status counts, p50/p95/p99 per endpoint group, 429s.

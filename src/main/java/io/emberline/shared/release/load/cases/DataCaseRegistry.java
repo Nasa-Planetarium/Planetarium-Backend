@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/** Case → handler map (E4: per-case classes and a registry instead of a switch). */
+/** Case → handler map (per-case classes and a registry instead of a switch). */
 public final class DataCaseRegistry {
 
     private static final Map<DataCase, DataCaseHandler> HANDLERS = new EnumMap<>(DataCase.class);

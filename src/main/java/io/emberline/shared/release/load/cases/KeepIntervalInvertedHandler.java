@@ -2,7 +2,7 @@ package io.emberline.shared.release.load.cases;
 
 import io.emberline.shared.release.load.ValidationReport;
 
-/** v1.2: value_lo above value_hi (finite bounds) — kept as stored (A1); every response and CSV serves the stored band. */
+/** v1.2: value_lo above value_hi (finite bounds) — kept as stored; every response and CSV serves the stored band. */
 public final class KeepIntervalInvertedHandler implements DataCaseHandler {
 
     @Override

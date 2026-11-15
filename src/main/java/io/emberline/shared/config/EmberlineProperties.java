@@ -10,11 +10,11 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 /**
  * Application settings ({@code emberline.*}). Validated at startup: a bad value stops the process (non-zero exit).
  *
- * @param cors    allowed browser origins (EMBERLINE_CORS_ALLOWED_ORIGINS); {@code *} is refused
- * @param limits  public limits, the values of contract/openapi.yaml Version.limits
- * @param errors  problem {@code type} URI base
+ * @param cors allowed browser origins (EMBERLINE_CORS_ALLOWED_ORIGINS); {@code *} is refused
+ * @param limits public limits, the values of contract/openapi.yaml Version.limits
+ * @param errors problem {@code type} URI base
  * @param release release root (EMBERLINE_RELEASE_ROOT) and polling of the active release
- * @param ingest  ingest tuning (COPY workers, DuckDB memory)
+ * @param ingest ingest tuning (COPY workers, DuckDB memory)
  */
 @ConfigurationProperties("emberline")
 public record EmberlineProperties(Cors cors, Limits limits, Errors errors, Release release, Ingest ingest) {
@@ -40,7 +40,7 @@ public record EmberlineProperties(Cors cors, Limits limits, Errors errors, Relea
     /**
      * Field names become the snake_case keys of /api/v1/version {@code limits}. The /hotspots day spans are not here:
      * they live in {@code emberline.hotspots.*} (one source for enforcement and /version). The v1.2 layer limits
-     * (fire events … spread nowcast) are only advertised here; the layer packets enforce them from this record.
+     * (fire events … spread nowcast) are only advertised here; the layer work items enforce them from this record.
      * The forecast limits ({@code POST /forecast}) are enforced by the outlook module's ForecastRequestFilter and
      * ForecastBodyReader (docs/DEVIATIONS.md).
      */

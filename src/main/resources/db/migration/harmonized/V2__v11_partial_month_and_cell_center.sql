@@ -1,4 +1,4 @@
--- data v1.1 (00-decisions A4): the month in progress carries value_projected (full-month estimate) and as_of_date
+-- data v1.1: the month in progress carries value_projected (full-month estimate) and as_of_date
 -- (last observed date); complete months have value_projected = value and as_of_date = month end. Stored as the files have them.
 ALTER TABLE aoi_month ADD COLUMN value_projected double precision, ADD COLUMN as_of_date date;
 ALTER TABLE aoi_month_compare ADD COLUMN value_projected double precision, ADD COLUMN as_of_date date;

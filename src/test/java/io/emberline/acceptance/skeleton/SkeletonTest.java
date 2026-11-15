@@ -1,4 +1,4 @@
-package io.emberline.b0;
+package io.emberline.acceptance.skeleton;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -12,8 +12,8 @@ import java.util.TreeMap;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 
-/** B0.01–B0.10 over real HTTP (public port + management port), no release active. */
-class B0SkeletonTest extends AppTestBase {
+/** – over real HTTP (public port + management port), no release active. */
+class SkeletonTest extends AppTestBase {
 
     @Test
     void b0_01_unknownRouteIsProblem404() {

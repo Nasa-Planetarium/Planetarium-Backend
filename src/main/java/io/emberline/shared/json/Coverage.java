@@ -13,9 +13,9 @@ import java.util.Objects;
  * {@code regions} only when set.
  *
  * @param available whether the layer has data for the asked area
- * @param scope     the range the layer has data for
- * @param reason    why not, only when {@code available=false}
- * @param regions   regions the layer covers, or null
+ * @param scope the range the layer has data for
+ * @param reason why not, only when {@code available=false}
+ * @param regions regions the layer covers, or null
  */
 public record Coverage(boolean available, Scope scope, @JsonInclude(JsonInclude.Include.ALWAYS) Reason reason,
                        @JsonInclude(JsonInclude.Include.NON_NULL) List<Region> regions) {

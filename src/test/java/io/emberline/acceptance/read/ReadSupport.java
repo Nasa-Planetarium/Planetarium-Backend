@@ -1,4 +1,4 @@
-package io.emberline.b2;
+package io.emberline.acceptance.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,9 +10,9 @@ import java.util.List;
 import tools.jackson.databind.JsonNode;
 
 /** Expected values straight from the fixture files, a Redis client for key counts, number/null assertions. */
-final class B2Support {
+final class ReadSupport {
 
-    private B2Support() {
+    private ReadSupport() {
     }
 
     /** aoi_month LEFT JOIN aoi_month_compare row of the fixture, columns in a fixed order (numbers as DOUBLE/BIGINT). */

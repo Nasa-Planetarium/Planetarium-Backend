@@ -8,4 +8,4 @@ title: en “Unauthorized” · ko “인증 필요”
 
 | why | what | how | opinion |
 |---|---|---|---|
-| no or expired session. | AuthenticationEntryPoint. | 401 through ProblemWriter. | B5. |
+| no or expired session. | AuthenticationEntryPoint. | 401 through ProblemWriter. | security review. |

@@ -4,7 +4,7 @@ import io.emberline.observation.application.port.in.CellCollection.CellPropertie
 import io.emberline.observation.domain.CellCase;
 import io.emberline.observation.domain.CellRow;
 
-/** One data case of a cell row (E4: a class per case, picked by {@link CellCaseRegistry}). */
+/** One data case of a cell row (a class per case, picked by {@link CellCaseRegistry}). */
 interface CellCaseHandler {
 
     CellCase handles();
@@ -15,7 +15,7 @@ interface CellCaseHandler {
     CellProperties properties(CellRow row);
 
     /**
-     * Properties with the file's values (A1) and the given flags; event columns are not in the release.
+     * Properties with the file's values and the given flags; event columns are not in the release.
      * value_projected / as_of_date only on partial rows (absent, not null, on every other row).
      */
     static CellProperties of(CellRow r, boolean outOfRange, boolean unavailable) {

@@ -1,4 +1,4 @@
-package io.emberline.f15p3;
+package io.emberline.acceptance.layers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -48,8 +48,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * over real HTTP on the owner fixture core-v12f15. Release {@code v12f15} = core-v11 (the
- * cell month / boundaries / meta the other loaders need) plus core-v12f15's harmonized_cell_day_frp.parquet (280 real
+ * over real HTTP on the owner fixture core-v12-layers. Release {@code v12-layers} = core-v11 (the
+ * cell month / boundaries / meta the other loaders need) plus core-v12-layers's harmonized_cell_day_frp.parquet (280 real
  * rows), satellite_day_status.parquet and satellite_month_status.parquet, unchanged; its release_manifest.csv carries
  * the fixture manifest's own lines for those three files and generated lines for the core-v11 files. Release
  * {@code v12bad} = the same with one wrong sha256. Expected values are read from the fixture files with DuckDB and
@@ -59,16 +59,16 @@ import tools.jackson.databind.json.JsonMapper;
         properties = {"management.server.port=0", "emberline.ratelimit.enabled=false", "emberline.release.poll-interval=1s",
                 "emberline.layer-cache.env=p3"})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class P3LayerApiTest {
+class NewLayerApiTest {
 
     static final JsonMapper JSON = JsonMapper.builder().build();
     static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
-    static final Path NEW_LAYERS = Fixtures.releaseRoot().resolve("core-v12f15");
+    static final Path NEW_LAYERS = Fixtures.releaseRoot().resolve("core-v12-layers");
     static final Path CORE_V11 = Fixtures.releaseRoot().resolve("core-v11");
     static final String FRP = "harmonized_cell_day_frp.parquet";
     static final String SDS = "satellite_day_status.parquet";
     static final String SMS = "satellite_month_status.parquet";
-    static final List<String> FROM_F15 = List.of(FRP, SDS, SMS);
+    static final List<String> FROM_V12_LAYERS = List.of(FRP, SDS, SMS);
     static final String META = "m2v_meta.json";
     /** The KR box of the fixture builder (and of MAPPING §8.4): 7.5° × 5.7° = 42.75 deg². */
     static final String KR_BOX = "124.5,33,132,38.7";
@@ -103,7 +103,7 @@ class P3LayerApiTest {
     static Path newRoot() {
         try {
             Path root = Files.createDirectory(Files.createTempDirectory("emberline-p3").resolve("releases"));
-            release(root.resolve("v12f15"), false, false);
+            release(root.resolve("v12-layers"), false, false);
             release(root.resolve("v12bad"), true, false);
             release(root.resolve("v12meta"), false, true);
             return root;
@@ -124,7 +124,7 @@ class P3LayerApiTest {
                 Files.copy(f, dir.resolve(f.getFileName()), StandardCopyOption.REPLACE_EXISTING);
             }
         }
-        for (String f : FROM_F15) {
+        for (String f : FROM_V12_LAYERS) {
             Files.copy(NEW_LAYERS.resolve(f), dir.resolve(f), StandardCopyOption.REPLACE_EXISTING);
         }
         Map<String, String> fixtureLines = new LinkedHashMap<>();
@@ -135,7 +135,7 @@ class P3LayerApiTest {
         try (Stream<Path> files = Files.list(dir)) {
             for (Path f : files.filter(Files::isRegularFile).sorted().toList()) {
                 String name = f.getFileName().toString();
-                if (FROM_F15.contains(name)) {
+                if (FROM_V12_LAYERS.contains(name)) {
                     String line = fixtureLines.get(name);
                     manifest.add(wrongFrpHash && name.equals(FRP) ? line.substring(0, line.lastIndexOf(',') + 1) + "0".repeat(64) : line);
                 } else {
@@ -180,12 +180,12 @@ class P3LayerApiTest {
 
     @BeforeAll
     void stageAndActivate() throws InterruptedException {
-        staged = IngestCli.run(jdbcUrl, ROOT, "stage", "v12f15");
+        staged = IngestCli.run(jdbcUrl, ROOT, "stage", "v12-layers");
         assertThat(staged.exit()).as(staged.json().toString()).isZero();
         bad = IngestCli.run(jdbcUrl, ROOT, "stage", "v12bad");
         badMeta = IngestCli.run(jdbcUrl, ROOT, "stage", "v12meta");
-        assertThat(IngestCli.run(jdbcUrl, ROOT, "activate", "v12f15", "--expect-sha256",
-                Fixtures.sha256(ROOT.resolve("v12f15/SHA256SUMS"))).exit()).isZero();
+        assertThat(IngestCli.run(jdbcUrl, ROOT, "activate", "v12-layers", "--expect-sha256",
+                Fixtures.sha256(ROOT.resolve("v12-layers/SHA256SUMS"))).exit()).isZero();
         long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
         JsonNode release = null;
         while (System.nanoTime() < deadline) {
@@ -288,7 +288,7 @@ class P3LayerApiTest {
         assertThat(rows.get("observation.cell_day_frp#load_ms").asLong()).isPositive();
         assertThat(rows.get("observation.cell_day_frp#bytes").asLong()).isPositive();
         assertThat(rows.get("observation.cell_day_frp#index_bytes").asLong()).isPositive();
-        long id = releaseId("v12f15");
+        long id = releaseId("v12-layers");
         assertThat(scalar("SELECT count(*) FROM pg_indexes WHERE schemaname = 'observation' AND indexname = 'cell_day_frp_r" + id
                 + "_key' AND indexdef LIKE '%UNIQUE%(date_local, cell_id)%'")).isEqualTo("1");
         // values as stored: Σ over the table equals Σ over the file (no recomputation)
@@ -297,7 +297,7 @@ class P3LayerApiTest {
         assertThat(scalar("SELECT count(*) FROM observation.cell_day_frp WHERE frp_sum = 0 AND release_id = " + id)).isEqualTo(file.get(0).get(1).toString());
     }
 
-    // ---- P3-1 (end to end) ----
+    // ---- L3-1 (end to end) ----
 
     @Test
     void p3_1_aWrongSha256InReleaseManifestRefusesTheStageNamingTheFile() {
@@ -307,13 +307,13 @@ class P3LayerApiTest {
     }
 
     /**
-     * F2: the stage folder lists m2v_meta.json under {@code models/} as the real manifest does; the top-level copy the
-     * loader reads is checked against that entry by base name — a matching copy stages (v12f15 above), a copy that
+     * the stage folder lists m2v_meta.json under {@code models/} as the real manifest does; the top-level copy the
+     * loader reads is checked against that entry by base name — a matching copy stages (v12-layers above), a copy that
      * differs in one byte is refused naming the top-level file.
      */
     @Test
     void p3_1b_aTopLevelCopyOfAListedSubdirectoryFileIsCheckedByBaseName() throws IOException {
-        assertThat(Files.readString(ROOT.resolve("v12f15/release_manifest.csv"))).contains("\nmodels/m2v_meta.json,")
+        assertThat(Files.readString(ROOT.resolve("v12-layers/release_manifest.csv"))).contains("\nmodels/m2v_meta.json,")
                 .doesNotContain("\nm2v_meta.json,");
         assertThat(staged.state()).isEqualTo("LOADED");
         assertThat(staged.json().toString()).doesNotContain("MANIFEST_UNLISTED:m2v_meta.json");
@@ -323,7 +323,7 @@ class P3LayerApiTest {
         assertThat(badMeta.reasons()).containsExactly("MANIFEST_SHA256_MISMATCH:m2v_meta.json");
     }
 
-    // ---- P3-2 ----
+    // ---- L3-2 ----
 
     @Test
     void p3_2_frpDayOverTheKrBoxReturnsExactlyTheFixtureRowsWithCellIdCenters() {
@@ -345,7 +345,7 @@ class P3LayerApiTest {
         assertThat(body.get("bbox").toString()).isEqualTo("[124.5,33.0,132.0,38.7]");
         assertThat(body.has("aoi_id")).isFalse();
         assertThat(body.get("coverage").toString()).isEqualTo("{\"available\":true,\"scope\":\"world_frp\",\"reason\":null}");
-        assertThat(body.get("data_release").asString()).isEqualTo("data-v12f15");
+        assertThat(body.get("data_release").asString()).isEqualTo("data-v12-layers");
         assertThat(body.get("notice").asString()).startsWith("불 세기(FRP, S-NPP 기준)");
         assertThat(body.has("method_version")).isFalse();
         // CSV: the contract x-csv-columns, same rows
@@ -378,7 +378,7 @@ class P3LayerApiTest {
         assertThat(get("/api/v1/cells/frp?aoi_id=NOPE&start=2025-03-20&end=2025-03-31").statusCode()).isEqualTo(404);
     }
 
-    // ---- P3-3 ----
+    // ---- L3-3 ----
 
     @Test
     void p3_3_frpMonthIsSumMaxSumPerCellAndMonthComputedFromTheFixtureRows() {
@@ -418,7 +418,7 @@ class P3LayerApiTest {
         assertThat(months).containsExactlyInAnyOrder("2025-03", "2026-11");
     }
 
-    // ---- P3-4 ----
+    // ---- L3-4 ----
 
     void assertProblem(String path, int status, String code, int errorNo, String param) {
         HttpResponse<String> r = get(path);
@@ -448,14 +448,14 @@ class P3LayerApiTest {
         assertProblem("/api/v1/cells/frp?bbox=" + KR_BOX + "&start=2025-03-20", 400, "invalid_param", 10001, "end");
     }
 
-    // ---- P3-5 ----
+    // ---- L3-5 ----
 
     @Test
     void p3_5_aStoredMinusZeroIsWrittenAsZeroAndStaysARow() throws SQLException {
         List<Object> row = fixtureFrp("2026-11-01", "2026-11-15").get(0);
         long cell = (Long) row.get(0);
         String date = (String) row.get(1);
-        long id = releaseId("v12f15");
+        long id = releaseId("v12-layers");
         String where = " WHERE release_id = " + id + " AND cell_id = " + cell + " AND date_local = DATE '" + date + "'";
         update("UPDATE observation.cell_day_frp SET frp_sum = '-0'::float8, frp_snpp_equiv_sum = '-0'::float8, "
                 + "frp_snpp_equiv_max = '-0'::real" + where);
@@ -494,7 +494,7 @@ class P3LayerApiTest {
         assertThat(csv.body().lines().toList().get(1)).doesNotContain(",-0").endsWith("," + date + ",0.0,0.0,0.0," + nPoints);
     }
 
-    // ---- P3-6 ----
+    // ---- L3-6 ----
 
     static List<String> fixtureDays(String start, String end, Set<String> satellites) {
         List<String> out = new ArrayList<>();
@@ -532,7 +532,7 @@ class P3LayerApiTest {
         assertThat(body.get("end").asString()).isEqualTo("2026-11-14");
         assertThat(body.get("through").asString()).isEqualTo(through);
         assertThat(body.get("months")).isEmpty();
-        assertThat(body.get("data_release").asString()).isEqualTo("data-v12f15");
+        assertThat(body.get("data_release").asString()).isEqualTo("data-v12-layers");
         List<String> expected = fixtureDays("2026-10-01", "2026-11-14", Set.of());
         assertThat(expected).isNotEmpty();
         assertThat(days(body)).containsExactlyElementsOf(expected);
@@ -599,7 +599,7 @@ class P3LayerApiTest {
         return out;
     }
 
-    // ---- P3-7 ----
+    // ---- L3-7 ----
 
     @Test
     void p3_7_layerHeadersEtag304AndErrorsNoStore() {

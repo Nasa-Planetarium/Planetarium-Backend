@@ -3,10 +3,10 @@
 # One request per query, no load. The container runs with --network none, a read-only root and the release + state
 # mounted read-only; requests go through `docker exec` to 127.0.0.1:8000 inside it.
 # Usage: deploy/forecast/smoke.sh <model-dir> <out-dir>
-#   <model-dir>  a scratch copy of the model repo (git archive c43368c) with its venv (uv sync --frozen --no-dev)
-#   <out-dir>    where the responses, the CLI outputs and smoke.tsv go (its data link is composed here)
+# <model-dir> a scratch copy of the model repo (git archive c43368c) with its venv (uv sync --frozen --no-dev)
+# <out-dir> where the responses, the CLI outputs and smoke.tsv go (its data link is composed here)
 # Env: IMAGE (planetarium-forecast:c43368c), PL_RELEASE_ROOT ($HOME/planetarium/release), RELEASE_KEY
-#      (v1.2-2026-11-15), STATE (forecast state dir, seeded with layout.py seed; default <out-dir>/state, seeded here).
+# (v1.2-2026-11-15), STATE (forecast state dir, seeded with layout.py seed; default <out-dir>/state, seeded here).
 # Dates: both sides get start = as_of + 1 from /healthz and horizon_days 30, so "today" (KST midnight) cannot split them.
 set -euo pipefail
 MODEL=$(cd "${1:?usage: smoke.sh <model-dir> <out-dir>}" && pwd)

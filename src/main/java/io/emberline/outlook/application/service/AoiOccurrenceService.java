@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Municipality probabilities (aoi_occurrence file rows, {@code unit=aoi}) and, for every other AOI, the grid summary of
- * its 0.5° cells ({@code unit=grid_summary}, {@code p_any} null — A1: no regional probability is made). The list
+ * its 0.5° cells ({@code unit=grid_summary}, {@code p_any} null — no regional probability is made). The list
  * answers {@code parent_id=KR} (all rows) and {@code SIDO_*} (that province's rows); any other existing AOI is out of
  * the layer's coverage (200, no items). Ranks are over the listed rows. Values are rounded to 5 decimals for display.
  */

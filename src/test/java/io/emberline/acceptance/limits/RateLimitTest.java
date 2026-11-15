@@ -1,4 +1,4 @@
-package io.emberline.b4;
+package io.emberline.acceptance.limits;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -26,12 +26,12 @@ import org.springframework.test.context.DynamicPropertySource;
 import tools.jackson.databind.JsonNode;
 
 /**
- * B4.01–B4.05: ip bucket of capacity 5 (refill 1 per hour, so counts are exact), buckets on redis-durable, local
+ * ip bucket of capacity 5 (refill 1 per hour, so counts are exact), buckets on redis-durable, local
  * fallback when it is down. The test client is an untrusted peer (trusted proxies = 10.9.9.9 only).
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class B4RateLimitTest extends AppTestBase {
+class RateLimitTest extends AppTestBase {
 
     static final Redises REDIS = new Redises().start();
     RedisCommands<String, String> durable;

@@ -4,7 +4,7 @@
 
 | 열 | 기준 |
 |---|---|
-| 정본 | `openapi.yaml`. arch2 `/api/v1` 자원 명사 경로(ARCHITECTURE §3.8). 경로 접두사 선택(CONFLICTS C1)은 아직 사람 확인 전 |
+| 정본 | `openapi.yaml`. arch2 `/api/v1` 자원 명사 경로(ARCHITECTURE §3.8). 경로 접두사 선택(CONFLICTS)은 아직 사람 확인 전 |
 | 핸드오프 | `product/backend-handoff.md` §2·§3 (모델팀 초안). 별칭 `/api/<경로>` 로 그대로 받는다 |
 | 시제품 v3 | 서버 `~/planetarium/api` 커밋 `a10a535`. 2026-11-14 19:11 KST 에 release 를 읽혀 띄운 응답(`validation/samples/`)으로 확인 |
 | 목업 EM.api | scratchpad `planetarium-mockup/api.js`(19:10 수정본, sha256 `a5a09beb…`)를 읽은 것. 다른 작업이 고치는 중이라 이후 판과 다를 수 있다 |
@@ -71,7 +71,7 @@
 | 칸 좌표 | `cell_lat`, `cell_lon` | 같음 | 정본: 속성에 선택. 시제품 v3: geometry(Polygon)로만 | 같음 |
 | 덩어리 8열 | 없음 | 없음 | 확장, 지금 전부 null | — |
 | 점 19열 | §1-1 | 파일 없음 | 정본 스키마 = §1-1 그대로 | 목: 503 |
-| 위성 상태 | 「위성별 자료 상태·최신 갱신 시각」 | 파일 없음 | 가정 모양(G1) | 목: 503 |
+| 위성 상태 | 「위성별 자료 상태·최신 갱신 시각」 | 파일 없음 | 가정 모양 | 목: 503 |
 
 ## 4. 코드값
 
@@ -124,7 +124,7 @@
 5. 오류 분기는 지금처럼 문자열 `code` (번호는 운영용).
 6. 값 반올림(소수 1자리)은 표시 단계에서만 — 응답 값은 파일 그대로.
 
-## 8. v1.2 새 층 — 파일·열 ↔ 응답 필드 (F15, 2026-11-15)
+## 8. v1.2 새 층 — 파일·열 ↔ 응답 필드 (2026-11-15)
 
 기준: release `data-v1.2-2026-11-15`(서버 `~/planetarium/release/v1.2-2026-11-15`), 모델팀 `product/team/v1.2/api_contract.md`.
 열 이름·행 수는 2026-11-15 서버에서 parquet 를 읽어 잰 것(polars 1.12.0, MemoryMax 6G). 적대 검토(같은 날, pandas/pyarrow, MemoryMax 8G, 다 받은 뒤 `.done` 확인)에서 `harmonized_cell_day_frp` 열과 아래 §8.4 대응을 다시 쟀다.
@@ -181,7 +181,7 @@
 - **fire_events 나라.** AOI `KR` = `country == 'KOR'` 11,943건(region KR 12,397 = KOR 11,943 · PRK 453 · null 1). `ADM0_ARG` = `country == 'ARG'` 1,223,123건(region ARG 1,228,581 = ARG · PRY 3,557 · BOL 721 · BRA 699 · URY 232 · CHL 221 · null 28). 이웃 행은 bbox 로만 나온다.
   `adm1_code` 52종 전부 `ADM1_<code>` 로 aoi_list 에 있다. `sido_nm` 17종 전부 aoi_list 시도 이름과 같다.
 - **fire_events 기타.** 날짜는 현지 날짜. `instrument` 는 MODIS 348,949 · VIIRS 892,029 뿐(섞인 사건 0). `burned_area_km2` 0 ⇔ `burn_confirmed=false`(741,204) · 양수 ⇔ true(120,425) · null 379,349(시작이 2012~2025 밖 379,343 + 안 6). 사건 일련은 전부 4자리. 한국 사건 감지 1개 79.6%(모델팀 문서 81%), 3개 미만 92.4%. `sum_weight = 0` 사건 368건.
-- **범위 상자.** 사건 감지 점 상자: KR 위도 33.21~38.60 · 경도 124.63~130.90, ARG 위도 −54.90~−21.81 · 경도 −73.18~−53.70. 판정 상자 KR `[124.5, 33.0, 132.0, 38.7]` 는 quickstart 예시 상자를 쓴 **추론**(모델팀 확인 필요, F15-Q5), ARG `[-73.5, -55.2, -53.4, -21.5]` 는 잰 범위 + 0.3° 로 우리가 정함.
+- **범위 상자.** 사건 감지 점 상자: KR 위도 33.21~38.60 · 경도 124.63~130.90, ARG 위도 −54.90~−21.81 · 경도 −73.18~−53.70. 판정 상자 KR `[124.5, 33.0, 132.0, 38.7]` 는 quickstart 예시 상자를 쓴 **추론**(모델팀 확인 필요, V12-Q5), ARG `[-73.5, -55.2, -53.4, -21.5]` 는 잰 범위 + 0.3° 로 우리가 정함.
 - **spread KR 상자에 일본이 들어 있다.** region KR 147칸 = `cand_adm0` KOR 98 · JPN 47 · null 2. ARG 10,042 = ARG 9,941 · PRY 39 · BRA 27 · URY 21 · BOL 14. 지금 KR 칸 범위(위도 33.19~36.11, 경도 129.29~131.71)는 그날 불 위치라 상자 정의가 아니다. 날짜는 현지 날짜.
 - **FWI.** 295 AOI 전부 마지막 날 2026-11-11. `fwi_pct` null 92,925 = 2026년 행 전부(그 밖 0). `fwi_rel_class` null 0. 날짜는 NASA POWER LST 날. 한국은 절대 FWI 의 AUC(0.634)가 상대(0.596)보다 높다(fwi_meta) — 배지 기본은 모델팀대로 상대.
 - **불 유형.** 295 AOI × 313달(2000-11~2026-11). `top_event_id` 14,916종 전부 fire_events 에 있음. `none` 인데 `top_event_id` 가 있는 달 52개(W = 0 사건).
@@ -189,12 +189,12 @@
 - **응답 크기(파일로 직렬화해 잼).** `/occurrence/grid` 전 세계: full 11.34 MB / gzip 0.65 MB, map 6.58 MB / gzip 0.47 MB, 반올림 없으면 12.56 / 0.93 MB. `/spread-nowcast` 전체 1.57 / 0.13 MB. `/fire-events` 1,000건 0.53 / 0.06 MB.
 - **위성 상태.** satellite 5종, S-NPP 2012-01-20 ~ 2026-11-02, 나머지 끝 2026-11-14. `coverage` 값 global 하나. month_status complete 927 · partial 7.
 
-### 8.5 aoi_month_compare 교체 — 예년 비교 기준 기간 열 (data-v1.2-2026-11-15 r3, 2026-11-15, CMD-61bf1e310aff)
+### 8.5 aoi_month_compare 교체 — 예년 비교 기준 기간 열 (data-v1.2-2026-11-15 r3, 2026-11-15)
 
 기준: 모델팀 계약 `docs/api_contract.md`(모델 저장소 `b062154`) 「예년 비교 기준 기간 — `baseline_period`, `continuity_ratio` (2026-11-15)」
 81–95행·241행, `docs/release_v1.2-2026-11-15.md` 68–71행·284행. 파일 = r3 `aoi_month_compare.parquet`(sha256 `4b108682…e5be814b`,
 1,580,963행 — 행 수 그대로, 열 3개 더함). 값은 파일 그대로 싣고 다시 계산하지 않는다(`verdict` 포함). 명세 사본(`spec/contract`)에는 읽은 때
-이 열들이 없었다(docs/DEVIATIONS.md F15-CMP-SPEC).
+이 열들이 없었다(docs/DEVIATIONS.md V12-CMP-SPEC).
 
 | 열(파일 이름 그대로) | 응답 필드 | 실리는 곳 | 모델팀 계약 | 잰 것 (r3) |
 |---|---|---|---|---|
@@ -207,17 +207,17 @@
 - 「다음 달 평년 수준」(api_contract 241행) 블록은 서버에 없다 — 기간 규칙을 붙일 곳이 없어 바꾸지 않았다.
 - 새 `reports/` 3개(`compare_continuity_ratios.csv`, `compare_continuity_validation.csv`, `projection_method_validation.csv`)는 release_manifest 에 있고 적재하지 않는다(있는지만 본다).
 
-## 9. F17 — `POST /forecast` (FireOutlook Planner 30일 전망, 2026-11-15)
+## 9. `POST /forecast` (FireOutlook Planner 30일 전망, 2026-11-15)
 
-기준: 모델팀 계약 `docs/api_contract.md` 「`POST /forecast`」(모델 레포 main `c43368c`) — 사본 `$HOME/planetarium/spec/product/team/v1.2/api_contract-v2.md`(아래 「계약 l.N」은 이 사본의 줄), 함수 `planetarium/forecast.py`(같은 커밋, 「코드 l.N」), 결정 `00-decisions.md` F17. 값은 모델 함수가 낸다 — 이 서버는 검증·전달·캐시만 하고 응답 본문을 다시 쓰지 않는다(F17 「재구현·값 재계산 금지」).
+기준: 모델팀 계약 `docs/api_contract.md` 「`POST /forecast`」(모델 레포 main `c43368c`) (아래 「계약 l.N」은 그 문서의 v1.2 사본 줄), 함수 `planetarium/forecast.py`(같은 커밋, 「코드 l.N」). 값은 모델 함수가 낸다 — 이 서버는 검증·전달·캐시만 하고 응답 본문을 다시 쓰지 않는다(「재구현·값 재계산 금지」).
 
 ### 9.1 경로
 
 | 정본 `/api/v1` | 모델팀 경로(별칭 `/api/…`) | 받는 쪽 | 근거 |
 |---|---|---|---|
-| `POST /forecast` (본문 JSON) | `POST /forecast` → 별칭 `POST /api/forecast`(본문 그대로 forward) | 서버 안 forecast 서비스 `POST /forecast` (§9.3) | 계약 l.314, l.338–341; 결정 F17 「경로: POST 이지만 읽기 전용 계산」 |
+| `POST /forecast` (본문 JSON) | `POST /forecast` → 별칭 `POST /api/forecast`(본문 그대로 forward) | 서버 안 forecast 서비스 `POST /forecast` (§9.3) | 계약 l.314, l.338–341; 「경로: POST 이지만 읽기 전용 계산」 |
 
-공개 경로(Pages Function → Worker → 터널 8090)에서 허용되는 POST 는 이것 하나다(DEVIATIONS F17-PUB). 다른 POST·PUT·PATCH·DELETE 는 계속 405.
+공개 경로(Pages Function → Worker → 터널 8090)에서 허용되는 POST 는 이것 하나다(DEVIATIONS FC-PUB). 다른 POST·PUT·PATCH·DELETE 는 계속 405.
 
 ### 9.2 요청 필드·규칙 ↔ 원문
 
@@ -229,16 +229,16 @@
 | `region` 배열 | 유한한 수 4개 `[서, 남, 동, 북]`, -180 ≤ 서 < 동 ≤ 180, -90 ≤ 남 < 북 ≤ 90 | 계약 l.340 「[서, 남, 동, 북]」; 코드 l.137 `box(*region)` | 400 40005 |
 | `region` 객체 | 멤버 `type`(`Polygon`·`MultiPolygon`)·`coordinates` 만(Feature 아님). 링마다 위치 ≥ 4, 처음 = 끝, 위치 = 유한한 [경도, 위도] 2개 (±180/±90), 모든 링 위치 합 ≤ `forecast_polygon_vertices` (2,000), JTS valid(자기 교차·겹친 다각형 없음). 위치 순서는 그대로 | 계약 l.340 「GeoJSON Polygon/MultiPolygon」; 코드 l.137 `shape(...)`, l.141 `intersection` | 꼴 400 40005 / 꼭짓점 400 `polygon_too_complex` 40108 / 도형 400 `invalid_param` 40001 |
 | 기간 형식 | 정확히 하나: `horizon_days`(선택 `start`) 또는 `start`+`end` | 계약 l.344–345; 코드 l.408–415 | 400 40006 (`param` 빠진 쪽, `horizon_days`+`end` 는 `end`) |
-| `horizon_days` | JSON 정수 1 ~ `forecast_horizon_days_max` (30). `30.0`·`"30"`·`true` 안 받음 | 계약 l.344 「horizon_days: 30」; 요청 (CMD-2132dcdf433a) 「horizon_days 1–30」; 코드 l.408·411 (`if horizon_days:` · `int(...)`) | 400 40006 |
+| `horizon_days` | JSON 정수 1 ~ `forecast_horizon_days_max` (30). `30.0`·`"30"`·`true` 안 받음 | 계약 l.344 「horizon_days: 30」; 요청 「horizon_days 1–30」; 코드 l.408·411 (`if horizon_days:` · `int(...)`) | 400 40006 |
 | `start`·`end` | `YYYY-MM-DD` 이고 있는 날짜, `end ≥ start`, 양 끝 포함 ≤ `forecast_span_days` (400)일 | 계약 l.338 예; 코드 l.416–417 | 400 40006 / 400 `range_too_large` 40109 |
 | 기간이 as_of 다음 날부터인지, 기준 달 + 12개월 안인지 | 검사하지 않음 — 모델이 판단 | 계약 l.341 「기준일 다음 날부터, 기준 달에서 12개월 뒤 달까지」; 코드 l.417·463 | 서비스 400 → §9.4 60001 |
 | `horizon_days` 의 시작일 | 보낸 형식 그대로 넘김 — 모델이 오늘(KST)·as_of 로 정함 | 계약 l.344–345 「오늘(KST) ~ 오늘 + 29일 … 오늘이 기준일(as_of) 이하이면 as_of + 1일부터」; 코드 l.392–396·408–411 | — |
 
-서비스로 보내는 본문 = 위 검증을 지난 값을 한 가지 꼴로 다시 쓴 JSON(`ForecastQuery.json()`): 멤버 이름 순(`end`, `horizon_days`, `region`, `start`), 공백 없음, 수는 서비스가 읽을 double 의 가장 짧은 십진 표기(`37` → `37.0`, `-0.0` → `0.0`, `3.8e1` → `38.0`). 모델 CLI 와 같은 값이 나오는지는 F17-B 스모크가 대조한다(요청 4).
+서비스로 보내는 본문 = 위 검증을 지난 값을 한 가지 꼴로 다시 쓴 JSON(`ForecastQuery.json()`): 멤버 이름 순(`end`, `horizon_days`, `region`, `start`), 공백 없음, 수는 서비스가 읽을 double 의 가장 짧은 십진 표기(`37` → `37.0`, `-0.0` → `0.0`, `3.8e1` → `38.0`). 모델 CLI 와 같은 값이 나오는지는 FC-B 스모크가 대조한다(요청 4).
 
-### 9.3 내부 인터페이스 (F17-B 서비스 ↔ Spring)
+### 9.3 내부 인터페이스 (FC-B 서비스 ↔ Spring)
 
-F17-B 가 만드는 서비스(K3s 안, 기본 `http://planetarium-forecast:8000`, `EMBERLINE_FORECAST_URL`)의 HTTP 모양 — 이 꼴로 부른다.
+FC-B 가 만드는 서비스(K3s 안, 기본 `http://planetarium-forecast:8000`, `EMBERLINE_FORECAST_URL`)의 HTTP 모양 — 이 꼴로 부른다.
 
 | 요청 | 성공 | 실패 |
 |---|---|---|
@@ -246,7 +246,7 @@ F17-B 가 만드는 서비스(K3s 안, 기본 `http://planetarium-forecast:8000`
 | `GET /healthz` | 200 `{"as_of": "YYYY-MM-DD", "data_version": "...", "warm": true}` (`warmup()` 뒤) | 그 밖 = 상태 모름 |
 
 - `/healthz` 의 `as_of` 는 `forecast()` 가 응답 `as_of` 에 넣는 값과 같아야 한다(인자 없이 부를 때 = 월·일 단위 파일 기준일 중 늦은 쪽, 코드 l.404–407), `data_version` 은 비어 있지 않은 문자열. 다르면 Spring 은 넘기기만 하고 저장하지 않는다(§9.5 저장 조건) — 오류 없이 캐시가 꺼진다.
-- 타임아웃: 연결 `emberline.forecast.connect-timeout` 1 s, 요청 전체(헤더 + 본문) `emberline.forecast.timeout` 10 s (계약 l.403: warmup 뒤 30일 질의 ≤ 0.26 s; F17-B 측정: 13개월 WORLD·전 지구 폴리곤 질의 최대 6.7 s). 응답 ≤ `emberline.forecast.max-response-bytes` 4 MiB. HTTP/1.1, 리다이렉트 안 따름.
+- 타임아웃: 연결 `emberline.forecast.connect-timeout` 1 s, 요청 전체(헤더 + 본문) `emberline.forecast.timeout` 10 s (계약 l.403: warmup 뒤 30일 질의 ≤ 0.26 s; FC-B 측정: 13개월 WORLD·전 지구 폴리곤 질의 최대 6.7 s). 응답 ≤ `emberline.forecast.max-response-bytes` 4 MiB. HTTP/1.1, 리다이렉트 안 따름.
 - 성공 본문은 받은 바이트 그대로 `application/json` 으로 낸다. JSON 객체인지와 `as_of` 만 읽는다(캐시 판단).
 
 ### 9.4 오류 대응
@@ -262,9 +262,9 @@ F17-B 가 만드는 서비스(K3s 안, 기본 `http://planetarium-forecast:8000`
 ### 9.5 캐시
 
 - 서버 안 Redis(redis-cache, 공유 layer 캐시 `RedisLayerCache`, route `LayerRoute.FORECAST` — 새 캐시 클래스 없음): 키 `em:{env}:c:layer:forecast:s1:{data_version}@{as_of}:[kst{YYYY-MM-DD}:]{sha256(정규형 질의)}`, 값 = 서비스 본문 그대로(UTF-8), TTL `emberline.forecast.cache-ttl` 48 h.
-- `data_version`·`as_of` = 서비스 `GET /healthz`, `emberline.forecast.status-ttl` (60 s) 동안 재사용 → 매일 갱신(F17-B 요청 2, as_of 로 판 구분) 뒤 1분 안에 새 키.
+- `data_version`·`as_of` = 서비스 `GET /healthz`, `emberline.forecast.status-ttl` (60 s) 동안 재사용 → 매일 갱신(FC-B 요청 2, as_of 로 판 구분) 뒤 1분 안에 새 키.
 - `horizon_days` 질의는 키에 KST 날짜(모델의 「오늘」, 코드 l.392–396)가 들어간다 → 30일 질의를 날을 넘겨 내주지 않는다. 저장은 호출 전후 ±`emberline.forecast.day-skew` (2 min) 동안 KST 날짜가 같을 때만.
-- 저장 조건: 응답 `as_of` = 키의 as_of (갱신 중 바뀐 판을 옛 키에 넣지 않음), 본문이 올바른 UTF-8. `/healthz` 가 안 되면 읽지도 쓰지도 않고 그냥 넘긴다. 오류는 저장하지 않는다. Redis 장애 = miss (F15 와 같음).
+- 저장 조건: 응답 `as_of` = 키의 as_of (갱신 중 바뀐 판을 옛 키에 넣지 않음), 본문이 올바른 UTF-8. `/healthz` 가 안 되면 읽지도 쓰지도 않고 그냥 넘긴다. 오류는 저장하지 않는다. Redis 장애 = miss (새 층과 같음).
 - HTTP: `Cache-Control: no-store` (200 포함) — ETag·`X-Data-Version` 없음. POST 는 CDN·nginx proxy_cache 가 저장하지 않는다(`proxy_cache_methods GET HEAD`).
 - 속도 제한: scope `forecast` (`emberline.ratelimit.forecast.*`, 기본 10/분, 공개 1,800/분/주소), 경로 `/api/v1/forecast`·`/api/forecast` 가 같은 통을 쓴다. 넘으면 429 `rate_limited` 10301 (본문을 읽기 전).
 

@@ -48,7 +48,7 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * aoi_month_compare replaced in data-v1.2-2026-11-15 stage r3: baseline_period, continuity_ratio and
  * continuity_source over real HTTP. Release {@code r3cmp} = owner fixture core-v11 with the v1.2 aoi_list / aoi_boundaries
- * of core-v12f15 and aoi_month / aoi_month_compare of owner fixture core-v12cmp (r3 rows of KR, WORLD, ADM0_ARG, SIDO_11,
+ * of core-v12-layers and aoi_month / aoi_month_compare of owner fixture core-v12cmp (r3 rows of KR, WORLD, ADM0_ARG, SIDO_11,
  * SGG_31140, see build_fixture_v12cmp.sql); release {@code v11} = core-v11 unchanged (no such columns). Expected values
  * come from the fixture parquet (DuckDB) and the numbers of the brief, never from the code under test.
  */
@@ -60,7 +60,7 @@ class CompareBaselinePeriodApiTest {
     static final JsonMapper JSON = JsonMapper.builder().build();
     static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     static final Path CORE_V11 = Fixtures.releaseRoot().resolve("core-v11");
-    static final Path V12F15 = Fixtures.releaseRoot().resolve("core-v12f15");
+    static final Path V12_LAYERS = Fixtures.releaseRoot().resolve("core-v12-layers");
     static final Path V12CMP = Fixtures.releaseRoot().resolve("core-v12cmp");
     static final Path COMPARE = V12CMP.resolve("aoi_month_compare.parquet");
     static final List<String> AOIS = List.of("KR", "WORLD", "ADM0_ARG", "SIDO_11", "SGG_31140");
@@ -93,7 +93,7 @@ class CompareBaselinePeriodApiTest {
             Files.copy(CORE_V11.resolve("SHA256SUMS"), v11.resolve("SHA256SUMS"), StandardCopyOption.REPLACE_EXISTING);
             Path r3 = copyCore(root.resolve("r3cmp"));
             for (String f : List.of("aoi_list.parquet", "aoi_boundaries.geojson")) {
-                Files.copy(V12F15.resolve(f), r3.resolve(f), StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(V12_LAYERS.resolve(f), r3.resolve(f), StandardCopyOption.REPLACE_EXISTING);
             }
             for (String f : List.of("aoi_month.parquet", "aoi_month_compare.parquet")) {
                 Files.copy(V12CMP.resolve(f), r3.resolve(f), StandardCopyOption.REPLACE_EXISTING);

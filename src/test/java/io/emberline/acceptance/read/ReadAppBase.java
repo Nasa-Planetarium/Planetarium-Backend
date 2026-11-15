@@ -1,4 +1,4 @@
-package io.emberline.b2;
+package io.emberline.acceptance.read;
 
 import io.emberline.platform.flyway.MultiSchemaFlywayRunner;
 import io.emberline.support.EmbeddedPg;
@@ -27,7 +27,7 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"management.server.port=0", "emberline.cors.allowed-origins=https://app.example",
                 "emberline.ratelimit.enabled=false"})
-abstract class B2AppBase {
+abstract class ReadAppBase {
 
     protected static final JsonMapper JSON = JsonMapper.builder().build();
     protected static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();

@@ -26,7 +26,7 @@ public record CellCollection(String type, Properties properties, List<Feature> f
     }
 
     /**
-     * Columns of harmonized_cell_month as the file has them, plus the read-path flags (E3): interval_out_of_range
+     * Columns of harmonized_cell_month as the file has them, plus the read-path flags: interval_out_of_range
      * when value lies outside [value_lo, value_hi], interval_unavailable when the row has no interval. The eight
      * fire-event columns are not in the release and are null. value_projected and as_of_date (contract §진행 중인 달)
      * appear only on status = partial cells of a release that has them; otherwise the keys are absent.

@@ -1,4 +1,4 @@
-package io.emberline.b2;
+package io.emberline.acceptance.read;
 
 import io.emberline.support.Fixtures;
 import java.io.IOException;
@@ -11,7 +11,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.List;
 
-/** Release folders from the owner fixture core-v11 (v1.1, 8 files, real values) for the B2 tests. */
+/** Release folders from the owner fixture core-v11 (v1.1, 8 files, real values) for the tests. */
 final class V11Fixtures {
 
     static final List<String> FILES = List.of("aoi_boundaries.geojson", "aoi_list.parquet", "aoi_month.parquet",

@@ -1,20 +1,20 @@
 #!/bin/bash
 # Assemble a stage folder from the model team's release download, by hardlinks (the download is never written).
 #
-#   deploy/release/assemble.sh [--hotspots-from <dir>] [--extra-from <dir>] <download_dir> <stage_dir>
+# deploy/release/assemble.sh [--hotspots-from <dir>] [--extra-from <dir>] <download_dir> <stage_dir>
 #
 # The download is flat and has no SHA256SUMS; the backend stages a folder laid out as release_manifest.csv lists it and
 # identifies it by SHA256SUMS (data_version = <release_key>#<sha256(SHA256SUMS)[0:12]>, activate --expect-sha256). So:
-#   1. every release_manifest.csv entry is linked at its listed path (top level, models/, reports/), plus the manifest;
-#      an entry missing from the download is taken from --extra-from (files the model team re-published separately);
-#   2. each file a loader reads at the top of the folder (LOADER_TOP_LEVEL) that the manifest lists only under a
-#      subdirectory is linked at the top as well (today m2v_meta.json; the backend checks that copy against the listed
-#      entry by base name);
-#   3. the hotspot trees (harmonized_hotspots/, harmonized_hotspots_static_flags/) are linked from --hotspots-from
-#      (the previous stage folder; the download ships them only as tar files);
-#   4. SHA256SUMS = sha256sum of every top-level file, LC_ALL=C order;
-#   5. every SHA256SUMS line, every manifest bytes value and the sha256 of every subdirectory entry (not in SHA256SUMS)
-#      are checked against the manifest; then the folder is moved into place. An existing <stage_dir> is refused.
+# 1. every release_manifest.csv entry is linked at its listed path (top level, models/, reports/), plus the manifest;
+# an entry missing from the download is taken from --extra-from (files the model team re-published separately);
+# 2. each file a loader reads at the top of the folder (LOADER_TOP_LEVEL) that the manifest lists only under a
+# subdirectory is linked at the top as well (today m2v_meta.json; the backend checks that copy against the listed
+# entry by base name);
+# 3. the hotspot trees (harmonized_hotspots/, harmonized_hotspots_static_flags/) are linked from --hotspots-from
+# (the previous stage folder; the download ships them only as tar files);
+# 4. SHA256SUMS = sha256sum of every top-level file, LC_ALL=C order;
+# 5. every SHA256SUMS line, every manifest bytes value and the sha256 of every subdirectory entry (not in SHA256SUMS)
+# are checked against the manifest; then the folder is moved into place. An existing <stage_dir> is refused.
 # Source and stage must be on one filesystem (hardlinks). Needs bash, GNU coreutils/findutils and python3.
 # docs/INGEST.md "Assembling a v1.2 stage folder"; tools/test/assemble.test.mjs.
 set -Eeuo pipefail

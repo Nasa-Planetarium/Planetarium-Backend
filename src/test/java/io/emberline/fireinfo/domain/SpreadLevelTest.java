@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 /**
- * P2-8 boundaries (unit): low &lt; 0.05 ≤ moderate ≤ 0.20 &lt; high. The loader stores a parquet FLOAT as
+ * L2-8 boundaries (unit): low &lt; 0.05 ≤ moderate ≤ 0.20 &lt; high. The loader stores a parquet FLOAT as
  * its shortest decimal (Float.toString), so the file values 0.05f and 0.2f arrive as 0.05 and 0.2.
  */
 class SpreadLevelTest {

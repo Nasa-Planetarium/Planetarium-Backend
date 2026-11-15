@@ -2,7 +2,7 @@ package io.emberline.shared.release.load.cases;
 
 import io.emberline.shared.release.load.ValidationReport;
 
-/** E2: a missing month keeps value NULL (status missing); it is never turned into 0. */
+/** a missing month keeps value NULL (status missing); it is never turned into 0. */
 public final class KeepNullAsMissingHandler implements DataCaseHandler {
 
     @Override

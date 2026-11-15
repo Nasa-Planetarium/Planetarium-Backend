@@ -1,7 +1,7 @@
-# FireOutlook Planner service (decision F17, CMD-2132dcdf433a)
+# FireOutlook Planner service
 
 The model team's `planetarium.forecast` (model repo `c43368c`, unchanged) as an internal HTTP service in K3s.
-Spring (`POST /api/v1/forecast`, packet F17-A) validates the public request and calls this service; every number comes
+Spring (`POST /api/v1/forecast`, the API side) validates the public request and calls this service; every number comes
 from `forecast()`.
 
 | File | Role |
@@ -14,7 +14,7 @@ from `forecast()`.
 | `tests/` | pytest for the wrapper (run with the model venv) |
 | `../k8s/planetarium-forecast.yaml` | PV/PVC, Deployment, Service, NetworkPolicies, CronJob |
 
-## Internal HTTP interface (for F17-A)
+## Internal HTTP interface (for FC-A)
 
 `POST http://planetarium-forecast.planetarium.svc:8000/forecast`, body `{region, start?, end?, horizon_days?, as_of?}`
 (exactly these keys; `Content-Length` required, at most `FORECAST_MAX_BODY` = 256 KiB, so Spring's own cap must be
@@ -72,19 +72,19 @@ should be ≥ 10 s and its rate limit is what bounds the queue.
 
 ```
 release (read-only, PVC `release` = $HOME/planetarium/release at /release)
-  /release/v1.2-2026-11-15/*                       the model team's release folder, flat, never written
+  /release/v1.2-2026-11-15/* the model team's release folder, flat, never written
 state (PVC `forecast-state` = $HOME/planetarium/forecast-state at /state; read-only in the service)
-  /state/2026-11-14/planner_*  MANIFEST.json       one published as_of: all 27 planner files + their sha256 (immutable)
-  /state/2026-11-15/...                            the next one, written by the refresh
-  /state/current -> 2026-11-14                     relative symlink; replaced with rename(2) after a checked refresh
-  /state/.tmp-*                                    in progress, never read
+  /state/2026-11-14/planner_* MANIFEST.json one published as_of: all 27 planner files + their sha256 (immutable)
+  /state/2026-11-15/... the next one, written by the refresh
+  /state/current -> 2026-11-14 relative symlink; replaced with rename(2) after a checked refresh
+  /state/.tmp-* in progress, never read
 image
-  /opt/model                                       model repo c43368c + .venv; PYTHONPATH=/opt/model
-  /opt/model/data -> /tmp/pl-data                  baked link: PROCESSED_DATA_DIR = /opt/model/data/processed
+  /opt/model model repo c43368c + .venv; PYTHONPATH=/opt/model
+  /opt/model/data -> /tmp/pl-data baked link: PROCESSED_DATA_DIR = /opt/model/data/processed
 pod /tmp (emptyDir)
-  /tmp/pl-data -> /tmp/pl-data-views/<as_of>.<pid>.<n>          swapped with rename(2) at process start
-  /tmp/pl-data-views/<as_of>.<pid>.<n>/processed/<file>      -> /release/v1.2-2026-11-15/<file>  (every release file)
-                                                  planner_*  -> /state/<as_of>/planner_*          (overrides)
+  /tmp/pl-data -> /tmp/pl-data-views/<as_of>.<pid>.<n> swapped with rename(2) at process start
+  /tmp/pl-data-views/<as_of>.<pid>.<n>/processed/<file> -> /release/v1.2-2026-11-15/<file> (every release file)
+                                                  planner_* -> /state/<as_of>/planner_* (overrides)
 ```
 
 - The view links `/state/<as_of>/…`, never `/state/current/…`. `forecast()` reads `aoi_list.parquet` and
@@ -175,12 +175,12 @@ PL_MODEL_REPO=<model repo> deploy/forecast/build.sh c43368c
 docker save planetarium-forecast:c43368c | sudo -n k3s ctr images import -
 # 2. host dirs (hostPath type Directory: they must exist; the pods run as uid 10001)
 install -d -m 0755 "$HOME/planetarium/forecast-state" && sudo chown 10001:10001 "$HOME/planetarium/forecast-state"
-install -d -m 0755 "$HOME/planetarium/forecast-work"  && sudo chown 10001:10001 "$HOME/planetarium/forecast-work"
+install -d -m 0755 "$HOME/planetarium/forecast-work" && sudo chown 10001:10001 "$HOME/planetarium/forecast-work"
 # 3. apply (namespace, release PV/PVC and pl-app come from planetarium.yaml / deploy.sh)
 deploy/render.sh deploy/k8s/planetarium-forecast.yaml | kubectl apply -f -
 kubectl -n planetarium rollout status deployment/pl-forecast
 kubectl -n planetarium exec deploy/pl-forecast -- python -c "import urllib.request as u; print(u.urlopen('http://127.0.0.1:8000/healthz').read().decode())"
-# 4. then F17-A (Spring + Worker allow-list) and the live smoke through /api/v1/forecast
+# 4. then FC-A (Spring + Worker allow-list) and the live smoke through /api/v1/forecast
 ```
 
 Rebuilding with the same tag and re-importing needs `kubectl -n planetarium rollout restart deployment/pl-forecast`.
@@ -193,5 +193,5 @@ S=<private scratch dir>; git -C <model repo> archive c43368c | tar -x -C $S/mode
 (cd $S/model && uv sync --frozen --no-dev --python 3.13)
 (cd $S/model && FORECAST_TEST_MODEL=$S/model uv run --frozen --no-sync --with pytest \
    pytest <repo>/deploy/forecast/tests --basetemp $S/pytest -p no:cacheprovider)
-deploy/forecast/smoke.sh $S/model $S/smoke        # STATE=<seeded state dir> to reuse one
+deploy/forecast/smoke.sh $S/model $S/smoke # STATE=<seeded state dir> to reuse one
 ```

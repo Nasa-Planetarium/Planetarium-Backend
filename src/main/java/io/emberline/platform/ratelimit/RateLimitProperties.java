@@ -10,20 +10,20 @@ import org.springframework.boot.context.properties.bind.ConstructorBinding;
  * {@code emberline.ratelimit.*}. Buckets refill intervally: {@code capacity} tokens at start, {@code refillTokens}
  * added every {@code refillPeriod} (never above capacity).
  *
- * @param enabled        off → no limiting (management port is never limited)
- * @param ip             scope ip: every public request costs 1 (default burst 100, 50 per second)
- * @param heavy          scope heavy: routes in {@code heavyCosts} (default 30 per minute)
- * @param heavyCosts     path → token cost of the heavy scope (canonical and alias paths)
- * @param tiles          scope tiles: routes in {@code tileCosts} (default 240 per minute — one map pan or zoom asks
- *                       for 12–20 FIRMS WMS tiles; the upstream key has its own budget, emberline.firms.budget-*)
- * @param tileCosts      path → token cost of the tiles scope (canonical and alias paths)
+ * @param enabled off → no limiting (management port is never limited)
+ * @param ip scope ip: every public request costs 1 (default burst 100, 50 per second)
+ * @param heavy scope heavy: routes in {@code heavyCosts} (default 30 per minute)
+ * @param heavyCosts path → token cost of the heavy scope (canonical and alias paths)
+ * @param tiles scope tiles: routes in {@code tileCosts} (default 240 per minute — one map pan or zoom asks
+ * for 12–20 FIRMS WMS tiles; the upstream key has its own budget, emberline.firms.budget-*)
+ * @param tileCosts path → token cost of the tiles scope (canonical and alias paths)
  * @param trustedProxies peers (IPs or CIDRs) whose X-Forwarded-For is believed
- * @param hmacSecret     key of the subject HMAC in bucket keys (same on every pod)
- * @param global         scope global: every public request of all callers together, pod-local bucket (default burst
- *                       2000, 700 per second) — bounds the origin load whatever the number of addresses
- * @param forecast       scope forecast: routes in {@code forecastCosts} (default 10 per minute, stricter than heavy —
- *                       each request is a POST the CDN never caches and a call into the model's forecast service)
- * @param forecastCosts  path → token cost of the forecast scope (canonical and alias paths)
+ * @param hmacSecret key of the subject HMAC in bucket keys (same on every pod)
+ * @param global scope global: every public request of all callers together, pod-local bucket (default burst
+ * 2000, 700 per second) — bounds the origin load whatever the number of addresses
+ * @param forecast scope forecast: routes in {@code forecastCosts} (default 10 per minute, stricter than heavy —
+ * each request is a POST the CDN never caches and a call into the model's forecast service)
+ * @param forecastCosts path → token cost of the forecast scope (canonical and alias paths)
  *
  * <p>The defaults are single-user values. The public deployment (about 200 reviewers behind one NAT address) sets
  * {@code ip}, {@code heavy}, {@code tiles} and {@code forecast} in deploy/k8s/planetarium-app.yaml (docs/DEVIATIONS.md

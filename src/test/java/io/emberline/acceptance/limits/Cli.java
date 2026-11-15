@@ -1,4 +1,4 @@
-package io.emberline.b4;
+package io.emberline.acceptance.limits;
 
 import io.emberline.EmberlineApplication;
 import io.emberline.shared.cli.CliOutcome;

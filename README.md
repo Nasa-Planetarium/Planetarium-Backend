@@ -97,7 +97,7 @@ API (/api/v1)     PostgreSQL(지역·칸·방법) + DuckDB(일 단위·핫스팟
 
 ## API
 
-정본 경로는 `/api/v1`. 모두 공개 읽기 전용이다(로그인 없음, 세션·쿠키 없음).
+정본 경로는 `/api/v1`. 모두 공개 읽기 전용이다(로그인 없음, 세션·쿠키 없음). POST 는 계산만 하는 `/forecast` 하나가 공개돼 있다.
 
 | 메서드·경로 | 뜻 | 형식 | 상태 |
 |---|---|---|---|
@@ -112,12 +112,19 @@ API (/api/v1)     PostgreSQL(지역·칸·방법) + DuckDB(일 단위·핫스팟
 | `POST /summary-queries` | 폴리곤 기간별 합계 | JSON | 예정 |
 | `GET /hotspots` | 통합 핫스팟 점 (`bbox` 또는 `aoi_id`, `layer`, 커서 페이지) | JSON·CSV | 있음 |
 | `GET /cells` | 0.1° 칸×월 값 | GeoJSON | 있음 |
-| `GET /satellite-status` | 위성별 자료 상태 (일 단위 파일이 있으면 `days[]`) | JSON | 있음 |
+| `GET /satellite-status` | 위성별 자료 상태 (`freq=day` 는 `days[]`, `freq=month` 는 `months[]`) | JSON | 있음 |
 | `GET /methods/current` | 지금 판의 방법 설명 (`m2v_meta.json` 그대로) | JSON | 있음 |
 | `GET /methods/{methodVersion}` | 특정 판의 방법 설명 (지금 판만 응답) | JSON | 있음 |
 | `GET /firms/wms-tiles` | NASA FIRMS WMS 타일 대리 (한국 범위로 자름) | PNG | 있음 |
-| `POST /forecast` | 지역 30일 전망 | JSON | 예정 |
-| `/occurrence/*`, `/fire-events`, `/aois/{aoiId}/fwi`, `/spread-nowcast`, `/aois/{aoiId}/fire-regime`, `/cells/frp` | 발생 확률·화재 사건·FWI·확산·불 유형·FRP | JSON | 예정 |
+| `POST /forecast` | 지역 30일 전망 (FireOutlook Planner, 모델 함수 응답 그대로) | JSON | 있음 |
+| `GET /occurrence/grid` | 다음 달 발생 확률 0.5° 격자 | JSON·CSV | 있음 |
+| `GET /occurrence/aois` | 다음 달 발생 확률, 지역별 (`parent_id`) | JSON·CSV | 있음 |
+| `GET /fire-events` | 화재 사건 목록 (한국·아르헨티나, `bbox` 또는 `aoi_id`, 커서 페이지) | JSON | 있음 |
+| `GET /fire-events/{eventId}` | 화재 사건 하나 | JSON | 있음 |
+| `GET /aois/{aoiId}/fwi` | 지역 FWI (날짜별 값·평년) | JSON | 있음 |
+| `GET /spread-nowcast` | 확산 nowcast (`aoi_id` 또는 `bbox`) | JSON | 있음 |
+| `GET /aois/{aoiId}/fire-regime` | 지역 불 유형 (월별) | JSON | 있음 |
+| `GET /cells/frp` | 0.1° 칸 FRP (일·월) | JSON | 있음 |
 
 - **형식 고르기**: `?format=json|csv` 또는 `Accept`. 맞는 형식이 없으면 406.
 - **경로 별칭**: 모델팀 문서의 경로(`/api/aoi`, `/api/calendar`, `/api/compare`, `/api/summary`, `/api/hotspots`, `/api/cells`, `/api/status`, `/api/method`, `/api/firms/wms`, `/api/export.csv`)도 받는다. 필터 하나(`HandoffAliasForwardFilter`)가 정본 경로로 넘기고 `Link: <정본>; rel="canonical"` 을 붙인다. 모델팀 문서대로 만든 화면을 고치지 않고 붙이려고.
@@ -233,7 +240,7 @@ java -jar build/libs/emberline.jar
 | 구간 표시 | **프런트 몫.** 화면에서 lo = min(lo, hi, value), hi = max(lo, hi, value), lo 가 null 이면 구간 없이 값만. API·CSV 는 원값 |
 | 진행 중인 달 | `status = partial`. `value` = 그날까지 누계, `value_projected`·`as_of_date` 함께. 완결된 달과 견주지 않는다. `as_of_date` 뒤 날은 `out_of_range` |
 | release 에 없는 달·날 | `status: out_of_range`, 값은 모두 null |
-| `baseline_period` | `aoi_month_compare` 의 비교 기준 기간 — 예정 |
+| `baseline_period` | 비교 화면(`/comparison`)이 `aoi_month_compare` 의 비교 기준 기간과 `continuity_ratio`·`continuity_source` 를 파일 값 그대로 낸다 |
 | 산업 열원 | 플래그 파일이 있으면 `/hotspots` 에서 `is_static_source = true` 점을 뺀다 |
 
 케이스별 근거는 [`docs/cases/`](docs/cases/), 적재 쪽 케이스는 [`docs/INGEST.md`](docs/INGEST.md).
@@ -259,7 +266,7 @@ API 는 표시 이름을 따로 내지 않는다. `m2v_meta.json` 의 `display_n
 |---|---|---|
 | NASA FIRMS — MODIS C6.1 (Terra, Aqua), VIIRS 375 m C2 (S-NPP, NOAA-20, NOAA-21) | 모든 감지 값, WMS 타일 | We acknowledge the use of data from NASA's Fire Information for Resource Management System (FIRMS) (https://firms.modaps.eosdis.nasa.gov), part of NASA's Earth Science Data and Information System (ESDIS). |
 | MODIS MCD64A1 v061 | 모델 검증·화재 사건 피해 면적 | doi:10.5067/MODIS/MCD64A1.061 |
-| NASA POWER | FWI (예정) | |
+| NASA POWER | FWI | |
 | 행정 경계 — admdongkor (CC BY 4.0), geoBoundaries (ADM1 Public Domain, ADM2 CC BY 3.0), Natural Earth (Public Domain) | 지역 목록·경계 | CC BY 자료는 지도 아래 출처 표기 필요 |
 
 FIRMS 감지는 열 이상 감지이지 확인된 산불이 아니다. 값은 「감지 건수」로 읽는다.

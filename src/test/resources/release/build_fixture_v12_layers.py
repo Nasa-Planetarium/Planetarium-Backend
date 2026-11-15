@@ -1,4 +1,4 @@
-"""Owner fixture core-v12f15: a small, real-valued subset of release data-v1.2-2026-11-15, for the v1.2 new layers
+"""Owner fixture core-v12-layers: a small, real-valued subset of release data-v1.2-2026-11-15, for the v1.2 new layers
 Values are copied, never recomputed.
 
 Whole files (small): grid_occurrence_nextmonth_latest, aoi_occurrence_nextmonth_latest, spread_nowcast_latest,

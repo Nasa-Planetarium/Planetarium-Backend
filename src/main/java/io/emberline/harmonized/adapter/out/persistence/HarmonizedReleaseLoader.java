@@ -26,9 +26,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * harmonized partitions: {@code harmonized.aoi_month} and {@code harmonized.aoi_month_compare}, values copied
- * as-is (A1), including the v1.1 columns value_projected and as_of_date (optional, NULL for a v1 release) and the v1.2 r3
+ * as-is, including the v1.1 columns value_projected and as_of_date (optional, NULL for a v1 release) and the v1.2 r3
  * compare columns baseline_period, continuity_ratio, continuity_source (optional, NULL before r3). Missing
- * months keep value NULL (E2); out-of-interval values are kept (E3); v0 value_source names are translated to v1 and
+ * months keep value NULL; out-of-interval values are kept; v0 value_source names are translated to v1 and
  * reported. {@code harmonized.cell_center} = one centre per cell of harmonized_cell_month.parquet (AOI cell sets).
  * harmonized_cell_day.parquet and harmonized_residual_cell_month.parquet are NOT loaded (ruling R-CD1): when present
  * they must be listed in SHA256SUMS and have the expected columns and code values; the API reads them in place.

@@ -126,9 +126,9 @@ kind: ConfigMap
 metadata: {name: pl-web-conf, namespace: planetarium}
 data:
   # http context (the image's nginx.conf includes conf.d/*.conf). Two listeners:
-  #   8080 LAN    — pl-web (ClusterIP), reached by pl-web-forward-<LAN_PORT>.service; static www + /api as before.
-  #   8090 tunnel — pl-web-tunnel (ClusterIP only), reached by the cloudflared connector; public GET/HEAD allowlist
-  #                 plus the one public POST, /api/v1/forecast.
+  # 8080 LAN — pl-web (ClusterIP), reached by pl-web-forward-<LAN_PORT>.service; static www + /api as before.
+  # 8090 tunnel — pl-web-tunnel (ClusterIP only), reached by the cloudflared connector; public GET/HEAD allowlist
+  # plus the one public POST, /api/v1/forecast.
   # Spring's management port 8081 is proxied by neither listener.
   default.conf: |
     # map "" $emberline_data_version { default "<active data_version>"; } — written by deploy/deploy.sh on activation

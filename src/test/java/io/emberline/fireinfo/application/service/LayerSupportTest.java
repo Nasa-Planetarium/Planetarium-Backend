@@ -17,7 +17,7 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
 /**
- * F8 / MAPPING §8.3 (unit): a release without the layer file → 503 data_not_loaded 50502; the cache
+ * / MAPPING §8.3 (unit): a release without the layer file → 503 data_not_loaded 50502; the cache
  * wrap goes to the shared layer cache with the route, release and normalized query. data_release is
  * {@code ReleaseRef.dataRelease()} (the one helper, pinned here for the fire-info answers).
  */

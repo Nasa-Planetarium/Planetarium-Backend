@@ -5,7 +5,7 @@ import java.time.LocalDate;
 /**
  * One AOI month as the release has it: the {@code aoi_month} row and, when present, its {@code aoi_month_compare} row
  * (fields prefixed {@code compare}, plus its v1.2 r3 baseline_period / continuity_ratio / continuity_source). Nothing here
- * is computed (A1); NULL stays null.
+ * is computed; NULL stays null.
  */
 public record MonthRecord(int year, int month, Double value, Double valueLo, Double valueHi, Double valueProjected,
                           LocalDate asOfDate, Long rawModis, Long rawViirs, String valueSource, String dataSource,

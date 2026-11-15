@@ -24,7 +24,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Read-only access to {@code EMBERLINE_RELEASE_ROOT/<key>}: the resolved path must stay inside the root (also after
- * resolving symlinks); nothing is ever created there. SHA256SUMS lines are {@code <64 hex>  <file name>}.
+ * resolving symlinks); nothing is ever created there. SHA256SUMS lines are {@code <64 hex> <file name>}.
  */
 @Component
 class ReleaseFolderAdapter implements ReleaseFolderPort {

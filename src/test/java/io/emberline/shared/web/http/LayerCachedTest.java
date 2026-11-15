@@ -67,7 +67,7 @@ class LayerCachedTest {
                 .andExpect(content().string(""));
     }
 
-    /** F6: SCHEMA_VERSION is s4 since the shape changes, the compare fields and the /version limits; a client's s3 ETag of the same request is a 200 with a body. */
+    /** SCHEMA_VERSION is s4 since the shape changes, the compare fields and the /version limits; a client's s3 ETag of the same request is a 200 with a body. */
     @Test
     void anOldSchemaEtagIsNotAMatch() throws Exception {
         MvcResult first = mvc.perform(get("/api/v1/test-layer").requestAttr(ReleaseRefFilter.ATTRIBUTE, RELEASE)).andReturn();

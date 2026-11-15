@@ -9,7 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** P2-10 (unit): /api/events|fwi|spread|regime take aoi or aoi_id; both → 40003. */
+/** L2-10 (unit): /api/events|fwi|spread|regime take aoi or aoi_id; both → 40003. */
 class AoiParamAliasTest {
 
     final HandoffAliasTable table = new HandoffAliasTable();

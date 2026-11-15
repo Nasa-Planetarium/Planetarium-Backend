@@ -15,15 +15,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * P3-1 (acceptance 1 "sha256 = release_manifest.csv"): the owner fixture core-v12f15 passes its own
+ * L3-1 (acceptance 1 "sha256 = release_manifest.csv"): the owner fixture core-v12-layers passes its own
  * release_manifest.csv; a copy with one wrong sha256, one wrong byte count, one wrong row count or one listed file
- * removed is refused with a reason naming that file; an unlisted extra file is only a warning. F2: laid out like the real
+ * removed is refused with a reason naming that file; an unlisted extra file is only a warning. laid out like the real
  * manifest ({@code models/m2v_meta.json} listed, the loader's copy at the top), the top-level copy is checked against that
  * entry by base name.
  */
 class ReleaseManifestCheckTest {
 
-    static final Path FIXTURE = Fixtures.releaseRoot().resolve("core-v12f15");
+    static final Path FIXTURE = Fixtures.releaseRoot().resolve("core-v12-layers");
     static final String FRP = "harmonized_cell_day_frp.parquet";
     static final String META = "m2v_meta.json";
     static final ReleaseManifestCheck CHECK = new ReleaseManifestCheck(new DuckDb(new EmberlineProperties(null, null, null, null, null)));

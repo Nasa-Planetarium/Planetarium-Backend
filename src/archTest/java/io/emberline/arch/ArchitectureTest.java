@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
-/** B0.14–B0.16 — layer rules of the user's backend standard (controller returns only, pure domain, record DTOs). */
+/** –layer rules of the user's backend standard (controller returns only, pure domain, record DTOs). */
 class ArchitectureTest {
 
     static final JavaClasses MAIN = new ClassFileImporter()

@@ -29,7 +29,7 @@ import org.junit.jupiter.api.TestInstance;
 import redis.embedded.RedisServer;
 
 /**
- * F4: one layer cache for every v1.2 layer. Keys = route + data_version + normalized query and no two
+ * one layer cache for every v1.2 layer. Keys = route + data_version + normalized query and no two
  * layers share a key space: the route segment is ':'-free and unique, so a key names its route; each route is used by one
  * module only. Against a real redis-server: a typed answer and a caller-serialized body are written once and read back on
  * a hit; a failed computation stores nothing. the forecast route keys text answers by the

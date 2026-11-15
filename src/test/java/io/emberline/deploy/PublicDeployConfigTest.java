@@ -65,7 +65,7 @@ class PublicDeployConfigTest {
             "/api/v1/methods/current",
             "/api/v1/methods/v1-m2v-2026-11-14",
             "/api/v1/firms/wms-tiles",
-            // v1.2 layers (contract 272aedb); 404 from the app until their packets land
+            // v1.2 layers (contract 272aedb); 404 from the app until their work items land
             "/api/v1/occurrence/grid",
             "/api/v1/occurrence/aois",
             "/api/v1/aois/SGG_31140/occurrence",

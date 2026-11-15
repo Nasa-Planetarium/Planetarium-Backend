@@ -5,7 +5,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
-/** Case → handler (E4: one class per case and a map, no switch). {@link #apply} runs every matching case in order. */
+/** Case → handler (one class per case and a map, no switch). {@link #apply} runs every matching case in order. */
 public final class ReadCaseRegistry {
 
     private static final Map<ReadCase, ReadCaseHandler> HANDLERS = new EnumMap<>(ReadCase.class);

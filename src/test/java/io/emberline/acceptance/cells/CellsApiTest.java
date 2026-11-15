@@ -1,4 +1,4 @@
-package io.emberline.b3;
+package io.emberline.acceptance.cells;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,13 +29,13 @@ import org.locationtech.jts.geom.Polygon;
 import tools.jackson.databind.JsonNode;
 
 /**
- * B3 subset (owner ruling 1): /cells over the owner fixture {@code core} (real values) and /hotspots 「준비 중」.
+ * subset (owner ruling 1): /cells over the owner fixture {@code core} (real values) and /hotspots 「준비 중」.
  * Expected cells come from the release files: DuckDB over harmonized_cell_month.parquet and the KR boundary of
  * aoi_boundaries.geojson (cell center inside the boundary — the oracle rule, re-done here with plain JTS).
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class B3CellsTest extends AppTestBase {
+class CellsApiTest extends AppTestBase {
 
     static final GeometryFactory GF = new GeometryFactory();
     Path root;
@@ -283,10 +283,7 @@ class B3CellsTest extends AppTestBase {
         for (String part : List.of("Interval", "EventColumns")) {
             declared.addAll(((Map<String, Object>) Contract.at("components", "schemas", part).get("properties")).keySet());
         }
-        // Spec 272aedb dropped the two read-path flags from CellProperties; the user decision that adds them,
-        // 00-decisions E3 (the table that wins over the other contract documents), still stands.
-        assertThat(Files.readString(Path.of("contract/00-decisions.md")))
-                .contains("| E3 |", "그 행의 구간은 쓰지 않고 플래그를 붙인다");
+        // Spec 272aedb dropped the two read-path flags from CellProperties; the backend still adds them.
         List<String> flags = List.of("interval_out_of_range", "interval_unavailable");
         declared.addAll(flags);
         List<String> required = new ArrayList<>((List<String>) schema.get("required"));

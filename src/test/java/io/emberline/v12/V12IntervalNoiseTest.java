@@ -229,7 +229,7 @@ class V12IntervalNoiseTest {
         assertThat(warnings(noise)).contains(CELL_WARNING, "INTERVAL_INVERTED:aoi_month.parquet:1 rows kept as stored");
         double lo = Double.parseDouble(storedCell("noise", NOISE_CELL, "value_lo"));
         double hi = Double.parseDouble(storedCell("noise", NOISE_CELL, "value_hi"));
-        assertThat(lo - hi).as("stored inverted, A1").isBetween(4.9e-6, 5.1e-6);
+        assertThat(lo - hi).as("stored inverted").isBetween(4.9e-6, 5.1e-6);
     }
 
     @Test
@@ -248,7 +248,7 @@ class V12IntervalNoiseTest {
         assertThat(warnings(wide)).contains(CELL_WARNING);
         double lo = Double.parseDouble(storedCell("wide", NOISE_CELL, "value_lo"));
         double hi = Double.parseDouble(storedCell("wide", NOISE_CELL, "value_hi"));
-        assertThat(lo - hi).as("stored inverted, A1").isBetween(1.99e-4, 2.01e-4);
+        assertThat(lo - hi).as("stored inverted").isBetween(1.99e-4, 2.01e-4);
     }
 
     @Test

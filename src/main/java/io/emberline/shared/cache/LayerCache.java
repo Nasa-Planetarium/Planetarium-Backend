@@ -17,9 +17,9 @@ public interface LayerCache {
     /**
      * An answer record, stored as JSON.
      *
-     * @param route           the layer's key space
+     * @param route the layer's key space
      * @param normalizedQuery the validated query in one canonical form (parameter order and number format fixed)
-     * @param type            the answer's record type
+     * @param type the answer's record type
      */
     <T> T get(LayerRoute route, ReleaseRef release, String normalizedQuery, Class<T> type, Supplier<T> compute);
 
@@ -31,8 +31,8 @@ public interface LayerCache {
      * the {@code version}). The caller decides what is storable, so lookup and store are separate. A cache failure is
      * an empty result.
      *
-     * @param route           the answer's key space
-     * @param version         what replaces the release's data_version in the key
+     * @param route the answer's key space
+     * @param version what replaces the release's data_version in the key
      * @param normalizedQuery the validated query in one canonical form (callers may hash a long one)
      */
     default Optional<String> findText(LayerRoute route, String version, String normalizedQuery) {

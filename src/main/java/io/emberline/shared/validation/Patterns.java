@@ -5,7 +5,7 @@ public final class Patterns {
 
     /**
      * aoi_id: the contract pattern {@code ^[A-Za-z0-9_:.\-]{1,64}$} widened by {@code +} and {@code ?}, because the
-     * release really has ids such as {@code ADM1_ATA+00?} (30 rows; E1: the file is canonical). See docs/DEVIATIONS.md.
+     * release really has ids such as {@code ADM1_ATA+00?} (30 rows; the file is canonical). See docs/DEVIATIONS.md.
      */
     public static final String AOI_ID = "^[A-Za-z0-9_:.+?\\-]{1,64}$";
     public static final String AOI_LEVEL = "^(world|continent|country|adm1|kr_sido|kr_sgg|group)$";

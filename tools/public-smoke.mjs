@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Public allowlist smoke (pl-pub item 5) against a live base URL. Node 22 built-in fetch only.
-//   node tools/public-smoke.mjs <base-url> [--pages]
+// node tools/public-smoke.mjs <base-url> [--pages]
 // <base-url> = the tunnel listener (e.g. a port-forward to pl-web-tunnel:8090) or the public site with --pages.
 // One line per row; exit 1 on any mismatch. With --pages, paths outside /api/v1/ belong to the static site, so for
 // them the row checks that no API, actuator or OpenAPI content comes back instead of a 404.

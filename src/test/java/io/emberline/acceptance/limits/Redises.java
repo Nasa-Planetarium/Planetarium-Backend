@@ -1,4 +1,4 @@
-package io.emberline.b4;
+package io.emberline.acceptance.limits;
 
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;

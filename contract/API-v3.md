@@ -381,20 +381,20 @@ GET /status?start=2026-11-04&end=2026-11-07
 
 ## 9. 가정 · 팀 확인 질문
 
-| # | 가정 (핸드오프에 없어서 정함) | 확인할 것 |
-|---|---|---|
-| G1 | `satellite_day_status` 열 = `satellite, date, status(ok/nrt/missing…), data_source, updated_at` | 실제 열 이름 |
-| G2 | 월 `value_source` = 그 달 다수 날의 출처 | 팀 aoi_month 가 경계 달을 어떻게 적는지 |
-| G3 | 2012-01-01~19 = `modis_m2v` (표에는 ~2011-12 / 2012-01-20~ 사이가 비어 있음) | |
-| G4 | 백분위 = 중간 순위, 소수 1자리 | 팀 계산식 (다르면 검사기가 경고만 낸다) |
-| G5 | AOI 소속 = 칸 중심이 경계 안 (팀 harmonize.py 는 칸×AOI `weight` 를 쓰는 것으로 보임 — 코드 읽은 추론) | 부분 소속 무게를 aoi_month 에 반영하는지 |
-| G6 | `cell_id` = `(floor(lat×10)+900)×3600 + (floor(lon×10)+1800)` | 팀 칸 번호 체계 (서버는 `cell_id`·`cell_lat`·`cell_lon` 을 파일에서 읽으므로 번호 체계에 기대지 않는다) |
-| G7 | SIDO 코드 = 행정표준코드 앞 2자리(2025-12-31 경계: 강원 51·전북 52) | 팀 `sido_20251231.sidocd` |
-| G8 | 군위군 `SGG_47720`(우리 경계가 아직 경북) — 팀 2025 경계는 대구 `27720` | 팀 경계로 바꾸면 사라짐 |
-| G9 | `country` = ISO3(`KOR`), `adm1` = 한국은 `SIDO_xx` | 팀 값 |
-| G10 | `nrt` 달은 판정. `low_sample` = 비교 표 플래그 `baseline_p75 < 1`(팀 `analysis.py` 에서 가져옴 — 핸드오프에 기준 없음) → `uncertain` | 핸드오프 「판정 생략」과 팀 코드(값 ≥ 3 이면 above) 중 어느 쪽이 확정인지 |
-| G12 | 달 `missing` = 기준 위성 자료가 그 달 날의 50 % 미만(팀 `harmonize.py`). 가짜 생성기와 `/summary` 의 점 재집계가 같은 규칙 | 핸드오프 「위성 자료 부족」의 수치 기준 |
-| G11 | `m2v_meta.json` 은 `method_version` 만 필수 | 팀 키 이름 |
+| 가정 (핸드오프에 없어서 정함) | 확인할 것 |
+|---|---|
+| `satellite_day_status` 열 = `satellite, date, status(ok/nrt/missing…), data_source, updated_at` | 실제 열 이름 |
+| 월 `value_source` = 그 달 다수 날의 출처 | 팀 aoi_month 가 경계 달을 어떻게 적는지 |
+| 2012-01-01~19 = `modis_m2v` (표에는 ~2011-12 / 2012-01-20~ 사이가 비어 있음) | |
+| 백분위 = 중간 순위, 소수 1자리 | 팀 계산식 (다르면 검사기가 경고만 낸다) |
+| AOI 소속 = 칸 중심이 경계 안 (팀 harmonize.py 는 칸×AOI `weight` 를 쓰는 것으로 보임 — 코드 읽은 추론) | 부분 소속 무게를 aoi_month 에 반영하는지 |
+| `cell_id` = `(floor(lat×10)+900)×3600 + (floor(lon×10)+1800)` | 팀 칸 번호 체계 (서버는 `cell_id`·`cell_lat`·`cell_lon` 을 파일에서 읽으므로 번호 체계에 기대지 않는다) |
+| SIDO 코드 = 행정표준코드 앞 2자리(2025-12-31 경계: 강원 51·전북 52) | 팀 `sido_20251231.sidocd` |
+| 군위군 `SGG_47720`(우리 경계가 아직 경북) — 팀 2025 경계는 대구 `27720` | 팀 경계로 바꾸면 사라짐 |
+| `country` = ISO3(`KOR`), `adm1` = 한국은 `SIDO_xx` | 팀 값 |
+| `nrt` 달은 판정. `low_sample` = 비교 표 플래그 `baseline_p75 < 1`(팀 `analysis.py` 에서 가져옴 — 핸드오프에 기준 없음) → `uncertain` | 핸드오프 「판정 생략」과 팀 코드(값 ≥ 3 이면 above) 중 어느 쪽이 확정인지 |
+| 달 `missing` = 기준 위성 자료가 그 달 날의 50 % 미만(팀 `harmonize.py`). 가짜 생성기와 `/summary` 의 점 재집계가 같은 규칙 | 핸드오프 「위성 자료 부족」의 수치 기준 |
+| `m2v_meta.json` 은 `method_version` 만 필수 | 팀 키 이름 |
 
 ---
 
@@ -402,7 +402,7 @@ GET /status?start=2026-11-04&end=2026-11-07
 
 - **잰 것(검토 후)**: 검토 수리 커밋에서 `pytest` 183 passed(rc 0) — §11.3 참고. 아래 줄은 첫 구현 때 잰 것.
 - **잰 것**: 서버 `~/planetarium/api` 커밋 `cdf396c` 에서 `pytest` 179 passed(rc 0), 가짜 생성기 → 검사기 rc 0(경고 0), `systemd-run --unit=pl-api` 로 띄워 핸드오프 8경로 + `/cells`·`/firms/wms`·`/v2`·`/v1` curl 각 1회 → 200(오류 2건 의도대로 400·404), 모든 응답에 `X-Method-Version`, `/v2`·`/v1` 만 `Deprecation: true`; FIRMS 키(32자)가 응답 3개·서비스 로그에 0회. 예시 JSON 은 가짜 파일로 서버가 실제로 낸 응답을 줄인 것.
-- **추론**: G5(팀이 칸×AOI 무게를 씀)는 팀 코드 `harmonize.py` 의 열 이름을 읽은 추론이다. 핸드오프 v1 실제 파일은 안 받았다.
+- **추론**: (팀이 칸×AOI 무게를 씀)는 팀 코드 `harmonize.py` 의 열 이름을 읽은 추론이다. 핸드오프 v1 실제 파일은 안 받았다.
 - **안 잰 것**: 팀 v0/v1 실제 파일 적재(받은 파일 없음), 전 세계 규모(점 파일 수천만 행)에서 `/hotspots`·`/summary` 응답 시간, 프런트가 v3 로 옮긴 뒤의 화면.
 
 ---
@@ -416,7 +416,7 @@ GET /status?start=2026-11-04&end=2026-11-07
 | 항목 | 계획서 | 핸드오프 → v3 |
 |---|---|---|
 | status 종류 | 6종, `out_of_range`(지원 범위 밖) 포함 | 5종. `out_of_range` 는 응답에만 쓰는 **확장**으로 남김(파일에 쓰면 검사기가 거부) |
-| `low_sample` | 「표본 부족, 판단 어려움」 상태 | 「예년 기록이 너무 적음 → 판정 생략」. 팀 코드는 비교 표 플래그(`baseline_p75 < 1`) → 우리도 플래그로 받음(G10) |
+| `low_sample` | 「표본 부족, 판단 어려움」 상태 | 「예년 기록이 너무 적음 → 판정 생략」. 팀 코드는 비교 표 플래그(`baseline_p75 < 1`) → 우리도 플래그로 받음 |
 | verdict 이름·경계 | 「평년보다 많음·비슷·적음」, 경계 수치 없음(v2 에서 우리가 75/25·n15·결측일 10 % 로 정함) | `above`/`similar`/`below`/`uncertain`, 80/20, 비교 연도 < 10, 기준 분포 status=ok 만. 결측일 10 % 규칙은 없앰 |
 | value_source | `snpp_observed` / `modis_harmonized` / `noaa20_bridged` | 5종 `modis_m2v_terra` / `modis_m2v` / `snpp_observed` / `n20_bridge` / `n21_bridge` (옛 이름은 별칭) |
 | NOAA-21 | 「검증용으로만 계산」 | NOAA-20 결측일 대체 `n21_bridge` × 1.053 |
@@ -427,7 +427,7 @@ GET /status?start=2026-11-04&end=2026-11-07
 | 불확실성 | 분위수 q10/q90 | `value_lo`/`value_hi` (실측 기간은 = value) |
 | 보기 전환 | 원자료 MODIS / VIIRS / 보정 결과(`view`) | 파라미터 없음 — 응답 필드 `raw_modis`·`raw_viirs`·`value` |
 | `/status` | `?aoi=&start=&end=` AOI 의 월별 상태 | `?start=&end=` 위성별 상태 + 최신 갱신 시각 (월 상태는 `/calendar`·`/summary`) |
-| M1 적용 기간 | 2000-11 ~ 2011-12 | 표는 ~2011-12 / 2012-01-20~ — 그 사이 19일은 `modis_m2v`(G3, 팀 코드도 2012-01 전체를 `modis_m2v` 로 씀) |
+| M1 적용 기간 | 2000-11 ~ 2011-12 | 표는 ~2011-12 / 2012-01-20~ — 그 사이 19일은 `modis_m2v`(팀 코드도 2012-01 전체를 `modis_m2v` 로 씀) |
 
 ### 11.2 핸드오프 ↔ 팀 코드 (핸드오프를 따르고 팀 이름은 받기만)
 
@@ -438,7 +438,7 @@ GET /status?start=2026-11-04&end=2026-11-07
 | 비교 표 열 | 11열 | + `status`, `low_sample` | 선택 열로 받음 |
 | aoi_list 열 | `name_ko, name_en, parent_id` | `harmonize.py` 문서·코드: `name`, `parent_aoi` | 별칭. `name_en` 없으면 경고 + null |
 | level | `country`, `kr_sido`, `kr_sgg` | `kr`, `sido`, `sgg`, `user` | 별칭(`user` 는 확장 level) |
-| 달 `missing` 기준 | 「위성 자료 부족」 | 기준 위성 자료 < 그 달 날의 50 %, 순서 partial > missing > nrt > ok | 따름(G12) |
+| 달 `missing` 기준 | 「위성 자료 부족」 | 기준 위성 자료 < 그 달 날의 50 %, 순서 partial > missing > nrt > ok | 따름 |
 | 2012-01 | `modis_m2v` ~2011-12, `snpp_observed` 2012-01-20~ | 2012-01 전체 `modis_m2v` | 달 이름은 같음(다수 날 = modis_m2v). 날 단위는 핸드오프 표대로 01-20 부터 `snpp_observed` |
 
 ### 11.3 이번 검토에서 고친 결함

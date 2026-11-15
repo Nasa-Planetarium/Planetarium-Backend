@@ -62,8 +62,8 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * outlook layer over real HTTP. Release {@code v1.2-2026-11-15} = owner fixture core-v11
  * (aoi_month etc., so the release stages) with aoi_list, aoi_boundaries and the two occurrence files of the owner
- * fixture core-v12f15 (real v1.2 values). Expected numbers come from the fixture rows with plain Java (DuckDB only
- * reads the parquet; point-in-polygon is an even-odd test written here, not JTS), never from the code under test (A1).
+ * fixture core-v12-layers (real v1.2 values). Expected numbers come from the fixture rows with plain Java (DuckDB only
+ * reads the parquet; point-in-polygon is an even-odd test written here, not JTS), never from the code under test.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"management.server.port=0", "emberline.ratelimit.enabled=false", "emberline.release.poll-interval=1s",
@@ -74,7 +74,7 @@ class OutlookOccurrenceTest {
     static final String KEY = "v1.2-2026-11-15";
     static final String GRID = "grid_occurrence_nextmonth_latest.parquet";
     static final String AOI = "aoi_occurrence_nextmonth_latest.parquet";
-    static final Path NEW_LAYERS = Fixtures.releaseRoot().resolve("core-v12f15");
+    static final Path NEW_LAYERS = Fixtures.releaseRoot().resolve("core-v12-layers");
     static final Path CORE_V11 = Fixtures.releaseRoot().resolve("core-v11");
     static final Path ROOT = newRoot();
     static final JsonMapper JSON = JsonMapper.builder().build();
@@ -122,7 +122,7 @@ class OutlookOccurrenceTest {
 
     static Path newRoot() {
         try {
-            Path root = Files.createDirectory(Files.createTempDirectory("emberline-f15p1").resolve("releases"));
+            Path root = Files.createDirectory(Files.createTempDirectory("emberline-outlook").resolve("releases"));
             release(root.resolve(KEY));
             Path badColumn = release(root.resolve("bad-column"));
             rewrite(badColumn, GRID, "SELECT * EXCLUDE (baseline_p) FROM src");
@@ -136,7 +136,7 @@ class OutlookOccurrenceTest {
         }
     }
 
-    /** core-v11 files, then the v1.2 aoi_list / aoi_boundaries and the two occurrence files of core-v12f15. */
+    /** core-v11 files, then the v1.2 aoi_list / aoi_boundaries and the two occurrence files of core-v12-layers. */
     static Path release(Path dir) throws IOException {
         Files.createDirectories(dir);
         try (Stream<Path> files = Files.list(CORE_V11)) {
@@ -208,7 +208,7 @@ class OutlookOccurrenceTest {
         while (System.nanoTime() < deadline && !KEY.equals(json(get("/api/v1/version")).path("release").path("release_key").asString(""))) {
             Thread.sleep(200);
         }
-        // F5: before any outlook request, the pod serializes the whole grid (map, full) and the KR list on its own
+        // before any outlook request, the pod serializes the whole grid (map, full) and the KR list on its own
         String dataVersion = json(get("/api/v1/version")).path("release").path("data_version").asString();
         RedisClient client = RedisClient.create("redis://127.0.0.1:" + REDIS_PORT);
         try (StatefulRedisConnection<String, String> c = client.connect()) {
@@ -338,7 +338,7 @@ class OutlookOccurrenceTest {
         return d >= 0.10 ? "higher" : d <= -0.10 ? "lower" : "similar";
     }
 
-    // ---- P1-1 … P1-4 grid ----
+    // ---- L1-1 … L1-4 grid ----
 
     @Test
     void p1_1_gridWithoutBboxServesEveryCellAndCountMatches() {
@@ -437,7 +437,7 @@ class OutlookOccurrenceTest {
         assertThat(get("/api/v1/occurrence/grid?fields=all").statusCode()).isEqualTo(400);
     }
 
-    // ---- P1-5 … P1-7 municipalities ----
+    // ---- L1-5 … L1-7 municipalities ----
 
     @Test
     void p1_5_krListHas252RowsSuspectedUnrankedOthersRankedOneTo248() {
@@ -509,7 +509,7 @@ class OutlookOccurrenceTest {
         assertThat(one.has("rank")).isFalse();
     }
 
-    // ---- P1-8 grid summary ----
+    // ---- L1-8 grid summary ----
 
     @Test
     void p1_8_nonSggAoisAnswerTheGridSummaryWithoutPersistentCells() {
@@ -580,7 +580,7 @@ class OutlookOccurrenceTest {
         return false;
     }
 
-    // ---- P1-10 headers ----
+    // ---- L1-10 headers ----
 
     @Test
     void p1_10_layerCacheHeadersEtagAnd304ErrorsNoStore() {
@@ -602,7 +602,7 @@ class OutlookOccurrenceTest {
         }
     }
 
-    // ---- P1-11 aliases ----
+    // ---- L1-11 aliases ----
 
     @Test
     void p1_11_aliasesEqualTheirCanonicalResponsesAndBothNamesAre40003() {
@@ -625,7 +625,7 @@ class OutlookOccurrenceTest {
         assertThat(both.headers().firstValue("Cache-Control")).hasValue("no-store");
     }
 
-    // ---- P1-12 loader ----
+    // ---- L1-12 loader ----
 
     @Test
     void p1_12_loaderRecordsRowCountsAndRefusesBadFiles() throws SQLException {
@@ -650,7 +650,7 @@ class OutlookOccurrenceTest {
         assertThat(years.reasons()).contains("NOT_INTEGRAL:" + AOI + ":n_years 1 rows");
     }
 
-    // ---- P1-13 CSV ----
+    // ---- L1-13 CSV ----
 
     @Test
     void p1_13_csvColumnsAreTheContractXCsvColumns() {
@@ -694,7 +694,7 @@ class OutlookOccurrenceTest {
         }
     }
 
-    // ---- F4: one layer cache, round trip; F5: serialized at activation ----
+    // ---- one layer cache, round trip; serialized at activation ----
 
     /**
      * Outlook bodies go through the shared layer cache: after the request, the bean is asked with a serialization that

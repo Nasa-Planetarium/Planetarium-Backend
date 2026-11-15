@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-/** F3/F6 range (unit): the five AOI shapes and the two judgement boxes of the contract. */
+/** range (unit): the five AOI shapes and the two judgement boxes of the contract. */
 class KrArgCoverageTest {
 
     @Test

@@ -8,7 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * P0b: the read-path interval flags of a cell (00-decisions E3). The flags describe the
+ * the read-path interval flags of a cell. The flags describe the
  * row; value, value_lo and value_hi stay as stored — an inverted interval is neither swapped nor widened.
  */
 class CellCaseRegistryTest {

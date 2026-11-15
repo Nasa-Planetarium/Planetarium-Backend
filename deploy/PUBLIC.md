@@ -1,10 +1,10 @@
 # EMBERLINE public exposure — owner steps (batch pl-pub)
 
-Target: about 200 concurrent reviewers (CMD-ddcff409522b, CMD-dd93c8af56c0).
+Target: about 200 concurrent reviewers .
 
 ```
 browser ─▶ Cloudflare Pages emberline.pages.dev (static, frontend repo GitHub Actions, Direct Upload)
-             └─ Pages Function /api/v1/* (GET/HEAD; POST only /api/v1/forecast, F17) ─ service binding API ─▶ Worker emberline-api (no public URL)
+             └─ Pages Function /api/v1/* (GET/HEAD; POST only /api/v1/forecast) ─ service binding API ─▶ Worker emberline-api (no public URL)
                   └─ vpc_services binding ORIGIN ─▶ Workers VPC Service ─▶ Cloudflare Tunnel "emberline"
                        └─ cloudflared Deployment emberline-tunnel (K3s, ns planetarium, 2 replicas)
                             └─ pl-web-tunnel.planetarium.svc.cluster.local:8090 (nginx tunnel listener, allowlist)
@@ -14,7 +14,7 @@ LAN: <HOST_IP>:<LAN_PORT> ─ pl-web-forward-<LAN_PORT>.service (kubectl port-fo
 
 Nothing in this repository holds a token, an account ID or a secret. Tokens are typed into the shell or the dashboard and
 end up in K8s Secret `emberline-tunnel` or GitHub secrets only. Every `kubectl` below uses
-`KUBECONFIG=$HOME/.kube/omb-k3s.yaml` and namespace `planetarium`.
+the cluster's kubeconfig (`PL_KUBECONFIG` in the untracked env file, or `KUBECONFIG`) and namespace `planetarium`.
 
 ## A. pl-web listeners (LAN entry unchanged)
 

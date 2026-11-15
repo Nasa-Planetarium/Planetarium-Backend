@@ -1,4 +1,4 @@
-package io.emberline.b4;
+package io.emberline.acceptance.limits;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,10 +35,10 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-/** B4.06–B4.11: release.activated through the publication registry → Redis Streams → inbox / DLQ. */
+/** release.activated through the publication registry → Redis Streams → inbox / DLQ. */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class B4EventsTest extends AppTestBase {
+class EventsTest extends AppTestBase {
 
     static final Redises REDIS = new Redises().start();
     static final String STREAM = "em:test:evt:release";

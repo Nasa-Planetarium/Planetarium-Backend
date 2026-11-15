@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 
-/** B0.13 — module boundaries (only {@code <ctx>.api} is public) and the exact module set. io.emberline.shared is the shared kernel, not a module. */
+/** module boundaries (only {@code <ctx>.api} is public) and the exact module set. io.emberline.shared is the shared kernel, not a module. */
 class ModulithTest {
 
     static final ApplicationModules MODULES = ApplicationModules.of(EmberlineApplication.class,

@@ -1,4 +1,4 @@
-package io.emberline.b1;
+package io.emberline.acceptance.ingest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,13 +30,13 @@ import org.springframework.test.context.TestPropertySource;
 import tools.jackson.databind.JsonNode;
 
 /**
- * B1 read side over real HTTP on the owner fixture {@code core} (real values). Expected values come from the release
+ * read side over real HTTP on the owner fixture {@code core} (real values). Expected values come from the release
  * files (DuckDB over the parquet / geojson / meta) or from contract examples that quote real values.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestPropertySource(properties = "emberline.release.poll-interval=1s")
-class B1ApiTest extends AppTestBase {
+class IngestApiTest extends AppTestBase {
 
     static final String META_MV = "v1-m2v-2026-11-14";
     static final String B_MV = "v1-m2v-2026-11-14-b";
@@ -252,7 +252,7 @@ class B1ApiTest extends AppTestBase {
     void b1_14_satelliteStatusWithoutTheSatelliteFilesIs503LayerNotLoaded() {
         // /satellite-status serves satellite_day_status / satellite_month_status; the v1
         // fixture core ships neither, so both freq answer 503 data_not_loaded 50502 (MAPPING §8.3 "파일 자체 없음").
-        // The day / month answers on the v1.2 files are P3-6 (io.emberline.f15p3.P3LayerApiTest).
+        // The day / month answers on the v1.2 files are L3-6 (io.emberline.acceptance.layers.NewLayerApiTest).
         for (String p : List.of("/api/v1/satellite-status?start=2025-03-01&end=2025-03-31",
                 "/api/v1/satellite-status?freq=month", "/api/v1/satellite-status")) {
             HttpResponse<String> r = get(p);
@@ -298,7 +298,7 @@ class B1ApiTest extends AppTestBase {
     void b1_19_methodAndStatusAliases() {
         assertThat(json(get("/api/method"))).isEqualTo(json(get("/api/v1/methods/current")));
         // core has no satellite files (b1_14): the alias reaches the same handler and answers the same 503 50502;
-        // alias = canonical on the v1.2 files is P3-6 (io.emberline.f15p3.P3LayerApiTest)
+        // alias = canonical on the v1.2 files is L3-6 (io.emberline.acceptance.layers.NewLayerApiTest)
         HttpResponse<String> status = get("/api/status?start=2025-03-01&end=2025-03-31");
         HttpResponse<String> canonical = get("/api/v1/satellite-status?start=2025-03-01&end=2025-03-31");
         assertThat(status.statusCode()).isEqualTo(canonical.statusCode()).isEqualTo(503);

@@ -25,8 +25,8 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
 /**
- * P3-4 at the service: the /cells/frp limits are the contract values from {@code emberline.limits} (Limits.CONTRACT),
- * checked at their edges, each with its error number; the row limit reads at most frp_rows + 1 rows. P3-5: -0.0 is
+ * L3-4 at the service: the /cells/frp limits are the contract values from {@code emberline.limits} (Limits.CONTRACT),
+ * checked at their edges, each with its error number; the row limit reads at most frp_rows + 1 rows. L3-5: -0.0 is
  * written as 0 while the row stays. R5: the cache key is the normalized query.
  */
 class FrpQueryServiceTest {

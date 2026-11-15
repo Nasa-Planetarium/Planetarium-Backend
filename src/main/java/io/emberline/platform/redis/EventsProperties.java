@@ -7,15 +7,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * {@code emberline.events.*} — event transport and the redis-durable connection (noeviction: Streams, rate-limit
  * buckets, global budgets). Keys are {@code em:{env}:...}.
  *
- * @param transport        {@code redis} (Streams) or {@code log} (relay only logs; pods still poll the release)
- * @param env              key namespace, e.g. {@code test}, {@code prod}
- * @param durableUrl       redis-durable URL (EMBERLINE_REDIS_DURABLE_URL)
+ * @param transport {@code redis} (Streams) or {@code log} (relay only logs; pods still poll the release)
+ * @param env key namespace, e.g. {@code test}, {@code prod}
+ * @param durableUrl redis-durable URL (EMBERLINE_REDIS_DURABLE_URL)
  * @param consumersEnabled stream consumers run in API pods only (off for the flyway / ingest profiles)
- * @param reclaimInterval  how often pending entries are reclaimed (XAUTOCLAIM)
- * @param minIdle          idle time before a pending entry is reclaimed
- * @param maxDeliveries    deliveries after which an entry goes to the DLQ
- * @param streamMaxLen     approximate stream cap (XADD MAXLEN ~)
- * @param commandTimeout   redis-durable command timeout
+ * @param reclaimInterval how often pending entries are reclaimed (XAUTOCLAIM)
+ * @param minIdle idle time before a pending entry is reclaimed
+ * @param maxDeliveries deliveries after which an entry goes to the DLQ
+ * @param streamMaxLen approximate stream cap (XADD MAXLEN ~)
+ * @param commandTimeout redis-durable command timeout
  */
 @ConfigurationProperties("emberline.events")
 public record EventsProperties(String transport, String env, String durableUrl, Boolean consumersEnabled,

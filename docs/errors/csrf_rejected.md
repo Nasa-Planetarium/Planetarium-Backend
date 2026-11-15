@@ -8,4 +8,4 @@ title: en “CSRF token rejected” · ko “CSRF 토큰 거부”
 
 | why | what | how | opinion |
 |---|---|---|---|
-| P5 cross-site request forgery. | CSRF filter. | 403, recorded. | B5. |
+| P5 cross-site request forgery. | CSRF filter. | 403, recorded. | security review. |

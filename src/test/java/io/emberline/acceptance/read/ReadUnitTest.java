@@ -1,4 +1,4 @@
-package io.emberline.b2;
+package io.emberline.acceptance.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -11,8 +11,8 @@ import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** B2 rules without the application: data-case handlers, alias rewrites. */
-class B2UnitTest {
+/** rules without the application: data-case handlers, alias rewrites. */
+class ReadUnitTest {
 
     @Test
     void everyReadCaseHasItsOwnHandler() {

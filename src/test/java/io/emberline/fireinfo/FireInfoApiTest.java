@@ -63,8 +63,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * rows P2-1 … P2-11 over real HTTP: release {@code f15} (core-v11 + the five fire-info files,
- * aoi_list and aoi_boundaries of owner fixture core-v12f15) staged and activated; {@code f15-nocol} staged only.
+ * rows L2-1 … L2-11 over real HTTP: release {@code v12layers} (core-v11 + the five fire-info files,
+ * aoi_list and aoi_boundaries of owner fixture core-v12-layers) staged and activated; {@code v12layers-nocol} staged only.
  * Expected values come from the fixture parquet (DuckDB) and plain Java in this class, never from the code under test.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -124,14 +124,14 @@ class FireInfoApiTest {
 
     @BeforeAll
     void stage() throws InterruptedException {
-        noColumn = IngestCli.run(jdbcUrl, ROOT, "stage", "f15-nocol");
-        staged = IngestCli.run(jdbcUrl, ROOT, "stage", "f15");
+        noColumn = IngestCli.run(jdbcUrl, ROOT, "stage", "v12layers-nocol");
+        staged = IngestCli.run(jdbcUrl, ROOT, "stage", "v12layers");
         assertThat(staged.exit()).as(staged.json().toString()).isZero();
-        IngestCli.Result active = IngestCli.run(jdbcUrl, ROOT, "activate", "f15", "--expect-sha256",
-                Fixtures.sha256(ROOT.resolve("f15/SHA256SUMS")));
+        IngestCli.Result active = IngestCli.run(jdbcUrl, ROOT, "activate", "v12layers", "--expect-sha256",
+                Fixtures.sha256(ROOT.resolve("v12layers/SHA256SUMS")));
         assertThat(active.exit()).as(active.json().toString()).isZero();
         long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
-        while (System.nanoTime() < deadline && !"f15".equals(json(get("/api/v1/version")).path("release").path("release_key").asString(""))) {
+        while (System.nanoTime() < deadline && !"v12layers".equals(json(get("/api/v1/version")).path("release").path("release_key").asString(""))) {
             Thread.sleep(200);
         }
     }
@@ -141,7 +141,7 @@ class FireInfoApiTest {
         REDIS.stop();
     }
 
-    // ---- P2-1 ------------------------------------------------------------------------------------------------------
+    // ---- L2-1 ------------------------------------------------------------------------------------------------------
 
     /** The event → SGG index equals the MAPPING §8.4 rule recomputed here from fire_events and aoi_list. */
     @Test
@@ -186,7 +186,7 @@ class FireInfoApiTest {
             }
         }
         Set<String> actual = new TreeSet<>(strings("SELECT event_id || '|' || sgg_id FROM fireinfo.fire_event_sgg WHERE release_id = "
-                + releaseId("f15")));
+                + releaseId("v12layers")));
         assertThat(actual).isEqualTo(expected);
         assertThat(staged.json().get("rows").get("fireinfo.fire_event_sgg").asLong()).isEqualTo(expected.size());
         assertThat(staged.json().get("rows").get("fireinfo.fire_event_sgg_dropped").asLong()).isEqualTo(dropped);
@@ -228,7 +228,7 @@ class FireInfoApiTest {
         return got;
     }
 
-    // ---- P2-2 ------------------------------------------------------------------------------------------------------
+    // ---- L2-2 ------------------------------------------------------------------------------------------------------
 
     @Test
     void p2_2_krIsCountryKorAndPrkComesOnlyThroughBbox() {
@@ -276,7 +276,7 @@ class FireInfoApiTest {
         assertThat(adm1List.get("coverage").get("available").asBoolean()).isTrue();
     }
 
-    // ---- P2-3 ------------------------------------------------------------------------------------------------------
+    // ---- L2-3 ------------------------------------------------------------------------------------------------------
 
     @Test
     void p2_3_periodFilterIsOverlapAtBothEdges() {
@@ -293,7 +293,7 @@ class FireInfoApiTest {
         assertThat(ids(ok(eventsPath(box, after, after)))).as("whole period after end_date").doesNotContain(e.id());
     }
 
-    // ---- P2-4 ------------------------------------------------------------------------------------------------------
+    // ---- L2-4 ------------------------------------------------------------------------------------------------------
 
     @Test
     void p2_4_sortTiesAndCursorPaging() {
@@ -335,7 +335,7 @@ class FireInfoApiTest {
         return out;
     }
 
-    // ---- P2-5 ------------------------------------------------------------------------------------------------------
+    // ---- L2-5 ------------------------------------------------------------------------------------------------------
 
     @Test
     void p2_5_areaRulesCoverageAndLimits() {
@@ -370,7 +370,7 @@ class FireInfoApiTest {
         assertThat(csv.body().replace("﻿", "").split("\n")[0]).isEqualTo(String.join(",", EVENT_COLUMNS));
     }
 
-    // ---- P2-6 ------------------------------------------------------------------------------------------------------
+    // ---- L2-6 ------------------------------------------------------------------------------------------------------
 
     @Test
     void p2_6_eventDetail() {
@@ -392,11 +392,11 @@ class FireInfoApiTest {
                 same(event.get(EVENT_COLUMNS.get(i)), row.get(i), id + " " + EVENT_COLUMNS.get(i));
             }
             assertThat(d.get("burned_area_label").asString()).isEqualTo("위성 확인 연소 면적(하한)");
-            assertThat(d.get("data_release").asString()).isEqualTo("data-f15");
+            assertThat(d.get("data_release").asString()).isEqualTo("data-v12layers");
         }
     }
 
-    // ---- P2-7 ------------------------------------------------------------------------------------------------------
+    // ---- L2-7 ------------------------------------------------------------------------------------------------------
 
     @Test
     void p2_7_fwiAlwaysCarriesAsOfDate() {
@@ -468,7 +468,7 @@ class FireInfoApiTest {
         }
     }
 
-    // ---- P2-8 ------------------------------------------------------------------------------------------------------
+    // ---- L2-8 ------------------------------------------------------------------------------------------------------
 
     /** One fixture cell: centre as stored (FLOAT), p_spread, nation of the centre. */
     record Cell(float lat, float lon, float p, String candAdm0) {
@@ -638,7 +638,7 @@ class FireInfoApiTest {
         assertThat(recomputed).isEqualTo(levels);
     }
 
-    // ---- P2-9 ------------------------------------------------------------------------------------------------------
+    // ---- L2-9 ------------------------------------------------------------------------------------------------------
 
     @Test
     void p2_9_fireRegimeRangeAndNoneWithTopEvent() {
@@ -653,7 +653,7 @@ class FireInfoApiTest {
         assertThat(r.get("name").asString()).isEqualTo(Duck.query("SELECT min(name) FROM read_parquet(?) WHERE aoi_id = 'ADM0_ARG'",
                 FireInfoFixture.REGIME).get(0).get(0));
         assertThat(r.get("coverage").get("scope").asString()).isEqualTo("kr_arg_regime");
-        assertThat(r.get("data_release").asString()).isEqualTo("data-f15");
+        assertThat(r.get("data_release").asString()).isEqualTo("data-v12layers");
 
         List<Object> none = Duck.query("SELECT aoi_id, CAST(year AS BIGINT), CAST(month AS BIGINT) FROM read_parquet(?) "
                 + "WHERE fire_regime = 'none' AND top_event_id IS NOT NULL ORDER BY aoi_id, year, month LIMIT 1", FireInfoFixture.REGIME).get(0);
@@ -683,7 +683,7 @@ class FireInfoApiTest {
         }
     }
 
-    // ---- P2-10 -----------------------------------------------------------------------------------------------------
+    // ---- L2-10 -----------------------------------------------------------------------------------------------------
 
     @Test
     void p2_10_layerHeaders304RedisKeyAndAliases() {
@@ -734,7 +734,7 @@ class FireInfoApiTest {
         problem("/api/regime?aoi=ADM0_ARG&aoi_id=ADM0_ARG", 400, 40003);
     }
 
-    // ---- F4: one layer cache, round trip -------------------------------------------------------------------------
+    // ---- one layer cache, round trip -------------------------------------------------------------------------
 
     /**
      * Every fire-info answer is written to the shared layer cache and read back on a hit: after the request, the bean is
@@ -772,7 +772,7 @@ class FireInfoApiTest {
         }
     }
 
-    // ---- P2-11 -----------------------------------------------------------------------------------------------------
+    // ---- L2-11 -----------------------------------------------------------------------------------------------------
 
     @Test
     void p2_11_loaderRefusesAMissingColumnAndRecordsCounts() throws SQLException {

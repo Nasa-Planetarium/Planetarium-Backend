@@ -1,4 +1,4 @@
-package io.emberline.b4;
+package io.emberline.acceptance.limits;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,13 +36,13 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 /**
- * B4.12–B4.19: FIRMS WMS proxy against a mock upstream (in-test HTTP server) with a fake key file. Global budget 3
+ * FIRMS WMS proxy against a mock upstream (in-test HTTP server) with a fake key file. Global budget 3
  * per hour; every test starts with empty redis-cache and redis-durable (fresh budget, no cached tiles).
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(OutputCaptureExtension.class)
-class B4WmsTest extends AppTestBase {
+class WmsTest extends AppTestBase {
 
     static final Redises REDIS = new Redises().start();
     static final String KEY = "FAKEKEY0123456789abcdef0123456789";

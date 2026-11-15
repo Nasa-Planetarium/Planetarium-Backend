@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
-/** B0.18 — SQL lives in src/main/resources/sql/&lt;ctx&gt;/ and never names another context's schema; Java SQL literals only in adapter.out. */
+/** SQL lives in src/main/resources/sql/&lt;ctx&gt;/ and never names another context's schema; Java SQL literals only in adapter.out. */
 class SqlBoundaryTest {
 
     static final List<String> SCHEMAS = List.of("catalog", "harmonized", "observation", "provenance", "outlook", "ingest", "platform",

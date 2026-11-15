@@ -44,7 +44,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * B3 /hotspots over real HTTP. Release {@code core} (real values) is activated without points first (503), then the
+ * /hotspots over real HTTP. Release {@code core} (real values) is activated without points first (503), then the
  * owner fixture core-v11/harmonized_hotspots (KR cells, real points) is copied next to it, plus two derived months:
  * 2001-03 = 2004-03 shifted back three years with null bounds (Terra-only shape: the fixture has no Terra-only month)
  * and 2001-04 = 2004-04 shifted with every row doubled (ties on the four public sort columns). Expected values come
@@ -508,7 +508,7 @@ class HotspotsApiTest {
 
     @Test
     @Order(15)
-    void f15_fileColumnNamesAdm0A3AndAdm1CodeReachNoResponse() {
+    void v12_fileColumnNamesAdm0A3AndAdm1CodeReachNoResponse() {
         // contract 272aedb: Hotspot fields and x-csv-columns are country / adm1; no alias keeps the file names
         JsonNode body = json(get("/api/v1/hotspots?" + EXPORT_Q));
         assertThat(body.get("count").asInt()).isPositive();

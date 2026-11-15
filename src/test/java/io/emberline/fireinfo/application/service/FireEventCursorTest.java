@@ -11,7 +11,7 @@ import io.emberline.shared.error.InvalidRequestException;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 
-/** P2-4 (unit): the cursor is opaque, round-trips its keyset and refuses other releases and selections. */
+/** L2-4 (unit): the cursor is opaque, round-trips its keyset and refuses other releases and selections. */
 class FireEventCursorTest {
 
     @Test

@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 /**
- * 00-decisions E4: data cases are handled by one handler class per case plus a registry map — no {@code switch}
+ * data cases are handled by one handler class per case plus a registry map — no {@code switch}
  * statements or switch expressions anywhere in src/main.
  */
 class SourceRulesTest {
@@ -32,6 +32,6 @@ class SourceRulesTest {
                 }
             }
         }
-        assertThat(violations).as("switch statements/expressions (E4: use handler classes + a registry)").isEmpty();
+        assertThat(violations).as("switch statements/expressions (use handler classes + a registry)").isEmpty();
     }
 }

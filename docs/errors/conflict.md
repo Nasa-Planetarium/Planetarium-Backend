@@ -16,7 +16,7 @@ title: en “Idempotency conflict” · ko “멱등 키 충돌”
 
 | why | what | how | opinion |
 |---|---|---|---|
-| the same Idempotency-Key with a different body. | unique constraint. | 409; the same key with the same body replays the original response. | B5. |
+| the same Idempotency-Key with a different body. | unique constraint. | 409; the same key with the same body replays the original response. | security review. |
 
 ## 80202 `PRECONDITION_FAILED` — HTTP 412
 
@@ -24,4 +24,4 @@ title: en “Precondition failed” · ko “전제 조건 불일치”
 
 | why | what | how | opinion |
 |---|---|---|---|
-| If-Match does not match. | version column. | 412 with the current ETag. | B5. |
+| If-Match does not match. | version column. | 412 with the current ETag. | security review. |

@@ -10,9 +10,9 @@ import java.util.Optional;
  * {@code sido_nm == aoi_list.name}, {@code ADM1_ARG-*} → {@code 'ADM1_' + adm1_code}, {@code SGG_*} → the event → SGG
  * index resolved from {@code sgg_all} at load (sgg_cd is not used), a box → centroid inside.
  *
- * @param kind  the rule
+ * @param kind the rule
  * @param value country code, adm1_code, SIDO name or SGG aoi_id (null for a box)
- * @param box   the box (null for an AOI)
+ * @param box the box (null for an AOI)
  */
 public record EventArea(Kind kind, String value, Bbox box) {
 

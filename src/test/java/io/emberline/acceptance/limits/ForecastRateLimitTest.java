@@ -1,4 +1,4 @@
-package io.emberline.b4;
+package io.emberline.acceptance.limits;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

@@ -8,7 +8,7 @@ title: en “Query too long” · ko “요청 주소가 너무 김”
 
 | why | what | how | opinion |
 |---|---|---|---|
-| P2 huge URL. | container URL limit (8 KB). | 400, the limit in `detail`. | publishing the limit costs nothing. |
+| huge URL. | container URL limit (8 KB). | 400, the limit in `detail`. | publishing the limit costs nothing. |
 
 ## 10102 `BODY_TOO_LARGE` — HTTP 413
 
@@ -16,7 +16,7 @@ title: en “Request body too large” · ko “요청 본문이 너무 큼”
 
 | why | what | how | opinion |
 |---|---|---|---|
-| P2 huge body. | request body over 256 KB. | 413, the limit in `detail`. | 413 by HTTP meaning; clients branch on `code`, so the status does not break them. |
+| huge body. | request body over 256 KB. | 413, the limit in `detail`. | 413 by HTTP meaning; clients branch on `code`, so the status does not break them. |
 
 ## 30101 `CALENDAR_RANGE_TOO_LARGE` — HTTP 400
 
@@ -40,7 +40,7 @@ title: en “Range too large” · ko “범위가 너무 큼”
 
 | why | what | how | opinion |
 |---|---|---|---|
-| P1·P2 cost attack. | query cost rule (period, area × days, limit). | 400 with `param`, hint to /api/v1/cells. | the wider the query, the more it should use pre-aggregates. |
+| cost attack. | query cost rule (period, area × days, limit). | 400 with `param`, hint to /api/v1/cells. | the wider the query, the more it should use pre-aggregates. |
 
 ## 40103 `CELLS_TOO_MANY` — HTTP 400
 
@@ -56,7 +56,7 @@ title: en “Range too large” · ko “범위가 너무 큼”
 
 | why | what | how | opinion |
 |---|---|---|---|
-| P1·P2 cost attack on the largest table (97.8 M rows). | `/cells/frp` limits — estimated rows (cells × period) ≤ 50,000, day period ≤ 31 days, month period ≤ 24 months (`Version.limits` frp_rows, frp_day_days, frp_month_months). | 400 with `param`, the limit in `detail`. | estimated before the query; the file needs a (date_local, cell_id) index to answer at all. |
+| cost attack on the largest table (97.8 M rows). | `/cells/frp` limits — estimated rows (cells × period) ≤ 50,000, day period ≤ 31 days, month period ≤ 24 months (`Version.limits` frp_rows, frp_day_days, frp_month_months). | 400 with `param`, the limit in `detail`. | estimated before the query; the file needs a (date_local, cell_id) index to answer at all. |
 
 ## 40105 `BBOX_AREA_TOO_LARGE` — HTTP 400
 
@@ -96,4 +96,4 @@ title: en “Request body too large” · ko “요청 본문이 너무 큼”
 
 | why | what | how | opinion |
 |---|---|---|---|
-| P2 huge body on the one public POST route. | `POST /forecast` body over `Version.limits` forecast_body_bytes, counted while reading. | 413, the limit in `detail`; the body is never parsed. | same 413 as 10102 by HTTP meaning; its own number because the limit is the route's, not the container's. |
+| huge body on the one public POST route. | `POST /forecast` body over `Version.limits` forecast_body_bytes, counted while reading. | 413, the limit in `detail`; the body is never parsed. | same 413 as 10102 by HTTP meaning; its own number because the limit is the route's, not the container's. |

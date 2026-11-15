@@ -6,7 +6,7 @@ info:
   description: |
     계약 정본(contract-first, arch2 S8 권장 · critique D1 해소). 작성 2026-11-14.
 
-    정본 순서 (00-decisions A2 · arch2 X9):
+    정본 순서 (arch2 X9):
     1. 모델팀 확정본 `docs/api_contract.md` (아직 없음 — 오면 그쪽 열 이름이 이긴다)
     2. 모델팀 초안 `product/backend-handoff.md` (경로·파라미터 이름·코드값·열 이름)
     3. release `data-v1-m2v-2026-11-14` 실사실 (`data/release-inspect/INSPECT.md` 가 잰 것)
@@ -16,13 +16,13 @@ info:
     - 정본 경로는 `/api/v1/...`. 핸드오프 8경로와 확장 2경로는 각 operation 의 `x-handoff-alias` 에 원래 경로·파라미터 이름을 적었다.
       별칭은 `/api/<핸드오프 경로>` 로 서비스하고 본문은 정본과 같다(헤더 `Link: <정본>; rel="canonical"` 만 더함, `Deprecation` 없음 — arch2 S5).
     - 응답 필드 이름 = 핸드오프 열 이름(snake_case). release 에서 이름이 다른 열은 `x-release-column` 에 적었다(적재기가 번역).
-    - 숫자는 파일 값 그대로 낸다(A1 「모델 따른다」). verdict·percentile 을 다시 계산하지 않는다.
+    - 숫자는 파일 값 그대로 낸다(「모델 따른다」). verdict·percentile 을 다시 계산하지 않는다.
     - `x-status: assumed` = release 에 없어서 가정으로 둔 모양. `x-status: release-absent` = 이 release 로는 503.
     - 예시 숫자는 release 실값(시제품 서버가 release 를 읽어 2026-11-14 19:12 KST 에 낸 응답에서 옮김). 점(`/hotspots`)·위성 상태는 release 에 없어 가짜 예시이며 그렇게 표시했다.
 
-    알려진 결함·열린 것: `contract/ASSUMPTIONS.md`, `CONFLICTS.md`. 대응표: `contract/MAPPING.md`.
+    대응표: `contract/MAPPING.md`.
 
-    v1.2 갱신 (2026-11-15, F15)
+    v1.2 갱신 (2026-11-15)
     - 정본 데이터 = release `data-v1.2-2026-11-15`(모델팀 확정, v1.1 쓰지 않음). method_version 은 그대로 `v1-m2v-2026-11-14`(FireBridge 재학습 없음).
     - 모델팀 확정 계약 = `product/team/v1.2/api_contract.md`(sha256 9e3c8292…, 서버 사본과 같음을 잼). 파라미터 이름은 그쪽을 따르고 별칭(`x-handoff-alias`)으로 받는다.
     - 새 경로(태그 outlook·fire-info, 그리고 `/cells/frp`): 아래 operation 의 `x-release-file` 이 읽는 파일.
@@ -35,7 +35,7 @@ info:
   x-data-release-history: [data-v1-m2v-2026-11-14, data-v1.1-m2v-2026-11-14, data-v1.2-2026-11-15]
   x-method-version: v1-m2v-2026-11-14
   x-display-names:
-    description: 화면 표시 이름만. 코드·파일·응답 값은 내부 id 그대로(F15, 모델팀 v1.2 노트).
+    description: 화면 표시 이름만. 코드·파일·응답 값은 내부 id 그대로(모델팀 v1.2 노트).
     m2v_xgb: FireBridge (MODIS-to-VIIRS Harmonizer)
     m2v_xgb_terra: FireBridge-Terra
     m2v_q10_q90: FireBridge Uncertainty Band
@@ -56,7 +56,7 @@ tags:
   - name: external
     description: FIRMS 대리
   - name: outlook
-    description: 다음 달 열원 발생 확률(모델팀, F15) · FireOutlook Planner 30일 전망 `POST /forecast`(F17 예측 화면)
+    description: 다음 달 열원 발생 확률(모델팀) · FireOutlook Planner 30일 전망 `POST /forecast`(예측 화면)
   - name: fire-info
     description: v1.2 새 층 — 화재 사건·연소 면적·FWI·확산 nowcast·불 유형 (대부분 한국·아르헨티나)
 x-header-sets:
@@ -692,7 +692,7 @@ paths:
         v1.2 부터 release 에 있다: `satellite_day_status.parquet`(28,316행, 위성 × UTC 날) · `satellite_month_status.parquet`(934행) — 2026-11-15 잼.
         - `freq=day` (기본) → `days[]`, 기간 ≤ 366일. `freq=month` → `months[]`, 기간 제한 없음(934행).
         - 날짜 기준은 **UTC**(`date_utc`) — 감지량의 `date_local` 과 다르다.
-        - 경로 이름은 v1 계약 그대로 둔다(지휘 과제 후보 `/satellites/status` 는 쓰지 않음 — 쟁점 F15-Q6).
+        - 경로 이름은 v1 계약 그대로 둔다(지휘 과제 후보 `/satellites/status` 는 쓰지 않음 — 쟁점 V12-Q6).
       x-release-file: [satellite_day_status.parquet, satellite_month_status.parquet]
       x-handoff-alias:
         path: /status
@@ -819,9 +819,9 @@ paths:
     get:
       tags: [outlook]
       operationId: getGridOccurrence
-      summary: 다음 달 열원 1건 이상 확률 — 전 세계 0.5° 격자 (F15 예측 화면)
+      summary: 다음 달 열원 1건 이상 확률 — 전 세계 0.5° 격자 (예측 화면)
       description: |
-        `grid_occurrence_nextmonth_latest.parquet` 그대로(52,855칸, 대상 달 2026-12, 2026-11-15 잼). 값은 다시 계산하지 않는다(A1).
+        `grid_occurrence_nextmonth_latest.parquet` 그대로(52,855칸, 대상 달 2026-12, 2026-11-15 잼). 값은 다시 계산하지 않는다.
         - 파일에 없는 칸 = 2012-02 이후 감지가 한 번도 없던 칸(남극·공해 포함). 「0%」가 아니라 「대상 아님」으로 그린다.
         - `persistent_source=true`(259칸) 는 순위·강조에서 빼고 회색. 값은 툴팁·상세에서만.
         - `vs_normal` 은 모델팀 표시 규칙(`p_any − baseline_p` ≥ +0.10 높음, ≤ −0.10 낮음, 그 사이 예년 수준)을 서버가 붙인 것 — 확률 자체는 파일 값.
@@ -931,7 +931,7 @@ paths:
       summary: 한 지역의 다음 달 발생 확률 (시군구 = 모델 값 · 그 밖 = 격자 요약)
       description: |
         - `kr_sgg` (252개): 파일 행 그대로, `unit: aoi`.
-        - 그 밖 AOI(나라·1급·시도·대륙·WORLD): 지역 확률은 **만들지 않는다**(칸 확률을 묶어 지역 확률로 바꾸려면 칸 사이 독립 가정이 필요 — 모델 값 재계산이라 A1 위반).
+        - 그 밖 AOI(나라·1급·시도·대륙·WORLD): 지역 확률은 **만들지 않는다**(칸 확률을 묶어 지역 확률로 바꾸려면 칸 사이 독립 가정이 필요 — 모델 값 재계산이라 위반).
           대신 칸 중심이 AOI 경계 안인 0.5° 격자의 **요약**(`unit: grid_summary`: 칸 수·단계별 칸 수·최대·중앙값, 지속 열원 제외)을 준다. `p_any` 는 null.
         - 격자가 하나도 없는 AOI → `coverage.available=false`, `reason: no_cells` → 화면 「이 지역 자료 없음」.
       x-handoff-alias:
@@ -992,11 +992,11 @@ paths:
           - 아르헨티나 1급 `ADM1_ARG-*` = `'ADM1_' + adm1_code`(사건의 adm1_code 52종 전부 aoi_list 에 있음, 이웃 나라 1급 포함).
           - 시군구 `SGG_*` = `sgg_all` 의 이름을 aoi_list 시군구로 **풀어서** 고른다: 전국에 하나뿐인 이름 → 그 시군구, 동명 이름(강서구·고성군·남구·동구·북구·서구·중구 7개) → 부모 시도 이름이 `sido_nm` 과 같은 것, 그래도 못 풀면 버린다.
             잰 결과: 이름 기준 소속 12,047건 중 못 푼 것 2건. 모델팀 규칙(이름만)은 14,314건으로 동명 구가 섞이고, 앞 판 규칙(이름 + `sido_nm`)은 시·도 경계를 넘는 사건 25건 중 24건을 놓쳤다(12,022건).
-            `sgg_cd` 는 쓰지 않는다: 230종 전부 `SGG_<cd>` 로 있지만 `sgg_nm` 과 어긋난 행 16건(예 41800 ↔ 파주시)·`sido_nm` 과 어긋난 행 4건이 있다(대표 시군구 하나만 담음, 쟁점 F15-Q3).
+            `sgg_cd` 는 쓰지 않는다: 230종 전부 `SGG_<cd>` 로 있지만 `sgg_nm` 과 어긋난 행 16건(예 41800 ↔ 파주시)·`sido_nm` 과 어긋난 행 4건이 있다(대표 시군구 하나만 담음, 쟁점 V12-Q3).
         - 나라 열의 이웃 행(잼): KR region 의 PRK 453건·null 1건, ARG region 의 PRY 3,557·BOL 721·BRA 699·URY 232·CHL 221·null 28건. 이 행들은 `aoi_id` 로는 안 나오고 `bbox` 로만 나온다.
         - `bbox`: `centroid_lat/lon` 이 상자 안(확장 — 모델팀 계약은 aoi 만). 상자가 아래 범위 상자와 안 겹치면 `coverage.available=false`.
           범위 상자(사건 감지 점 상자에서 잰 값): KR 위도 33.21~38.60 · 경도 124.63~130.90, ARG 위도 −54.90~−21.81 · 경도 −73.18~−53.70.
-          판정 상자는 KR `[124.5, 33.0, 132.0, 38.7]`(모델팀 quickstart 예시 상자 — 「한국 상자」 정의라는 것은 추론, 쟁점 F15-Q5) · ARG `[-73.5, -55.2, -53.4, -21.5]`(잰 범위 + 여유 약 0.3°, 우리가 정한 값).
+          판정 상자는 KR `[124.5, 33.0, 132.0, 38.7]`(모델팀 quickstart 예시 상자 — 「한국 상자」 정의라는 것은 추론, 쟁점 V12-Q5) · ARG `[-73.5, -55.2, -53.4, -21.5]`(잰 범위 + 여유 약 0.3°, 우리가 정한 값).
           이웃 나라 땅(파라과이 등)은 상자 안이어도 일부만 담겨 있다 — 화면은 그 나라 AOI 를 「자료 없음」으로 둔다.
         - 정렬 기본 `sum_weight` 내림차순(모델팀). 한국 사건의 79.6% 가 감지 1개, 92.4% 가 3개 미만(잼; 모델팀 문서는 81%) → 목록 화면은 `min_det=3` 을 보낸다(권장, 모델팀).
         - 범위 밖(위 AOI 가 아닌 AOI, 상자가 두 범위 상자와 안 겹침) → 200 `events: []` + `coverage.available=false`.
@@ -1174,7 +1174,7 @@ paths:
           `aoi_id=KR` 은 경계 안 98칸 이하만 나오고, 한국 근처 `bbox` 는 일본 칸도 낸다(모델 출력이라 그대로 그리고 `cand_adm0` 를 툴팁에 쓴다).
           모델 검증도 「한국 상자」(PR-AUC 0.147)와 「한국만」(0.210)을 따로 잰다 — 화면 성능 문구는 한국만 값.
         - coverage: AOI 는 `KR`·`SIDO_*`·`SGG_*`·`ADM0_ARG`·`ADM1_ARG-*` 만 범위 안. 일본·파라과이 등 이웃 AOI 는 칸이 일부 있어도 `available=false`(일부만 담김 — 「자료 없음」으로 둔다).
-          bbox 는 범위 상자(KR `[124.5, 33.0, 132.0, 38.7]` 추론 · ARG `[-73.5, -55.2, -53.4, -21.5]`, `/fire-events` 와 같음)와 겹치면 범위 안. 지금 KR 칸의 실제 범위는 위도 33.19~36.11 · 경도 129.29~131.71(그날 불 위치일 뿐 상자 정의가 아님, 쟁점 F15-Q5).
+          bbox 는 범위 상자(KR `[124.5, 33.0, 132.0, 38.7]` 추론 · ARG `[-73.5, -55.2, -53.4, -21.5]`, `/fire-events` 와 같음)와 겹치면 범위 안. 지금 KR 칸의 실제 범위는 위도 33.19~36.11 · 경도 129.29~131.71(그날 불 위치일 뿐 상자 정의가 아님, 쟁점 V12-Q5).
         - `level`: `low` < 0.05 ≤ `moderate` ≤ 0.20 < `high` (모델팀 규칙을 서버가 붙임 — quickstart 코드 `> 0.20` high · `≥ 0.05` moderate 와 같음). 잰 분포 low 9,708 · moderate 338 · high 143. 확률 숫자는 툴팁에만.
         - 크기(잼): 전체 10,189칸 JSON 1.57 MB / gzip 0.13 MB.
         - 필수 문구 `notice` 를 범례에 항상.
@@ -1333,7 +1333,7 @@ paths:
     post:
       tags: [outlook]
       operationId: postForecast
-      summary: FireOutlook Planner — 지역 + 기간(기본 오늘부터 30일)의 위성 탐지 전망 (F17, 실험 기능)
+      summary: FireOutlook Planner — 지역 + 기간(기본 오늘부터 30일)의 위성 탐지 전망 (실험 기능)
       description: |
         모델팀 계약 `POST /forecast`(모델 레포 docs/api_contract.md main c43368c, 사본 product/team/v1.2/api_contract-v2.md 「POST /forecast」).
         값은 모델팀 Python `planetarium.forecast.forecast()` 가 낸다(서버 안 별도 서비스, 시작 때 `warmup()` 1회) — 이 서버는 검증·전달·캐시만 하고
@@ -1451,7 +1451,7 @@ components:
     AoiIdQuery:
       name: aoi_id
       in: query
-      description: '`bbox` 와 정확히 하나(둘 다·둘 다 없음 → 400 invalid_param). 점은 그 점의 cell_id 가 AOI 칸인지로 거른다(G5).'
+      description: '`bbox` 와 정확히 하나(둘 다·둘 다 없음 → 400 invalid_param). 점은 그 점의 cell_id 가 AOI 칸인지로 거른다.'
       schema:
         $ref: '#/components/schemas/AoiId'
     Bbox:
@@ -2023,7 +2023,7 @@ components:
         confidence: {type: string, enum: [l, n, h]}
         daynight: {type: string, enum: [D, N]}
         cell_id: {$ref: '#/components/schemas/CellId'}
-        country: {type: [string, 'null'], description: ISO3 (가정 G9)}
+        country: {type: [string, 'null'], description: ISO3 (가정)}
         adm1: {type: [string, 'null']}
         harmonized_weight: {type: number, minimum: 0}
         weight_lo: {type: [number, 'null'], minimum: 0}
@@ -2144,7 +2144,7 @@ components:
     SatelliteStatus:
       type: object
       additionalProperties: false
-      description: v1.2 release 파일 모양(앞선 가정 G1 모양은 버림).
+      description: v1.2 release 파일 모양(앞선 가정 모양은 버림).
       required: [freq, days, months, data_release]
       properties:
         start: {type: [string, 'null'], format: date}
@@ -2169,7 +2169,7 @@ components:
         unit_code: {const: snpp_equiv_hotspots}
         meta:
           type: object
-          description: m2v_meta.json 그대로(키 자유, method_version 만 필수 — G11). release meta 의 `regional_only` 문구는 파일 내용과 다르다(R12).
+          description: m2v_meta.json 그대로(키 자유, method_version 만 필수). release meta 의 `regional_only` 문구는 파일 내용과 다르다(R12).
           required: [method_version]
         value_sources: {type: array}
         statuses: {type: array, items: {type: string}}
@@ -2315,7 +2315,7 @@ components:
       additionalProperties: false
       description: |
         모델팀 계약 요청 그대로(멤버 이름·형식). 기간은 `horizon_days`(선택 `start`) **또는** `start`+`end` — 정확히 하나.
-        `null` 멤버는 없는 것으로 본다. 모델 함수의 `as_of`·`today` 인자는 받지 않는다(시험용 — DEVIATIONS F17-ARGS).
+        `null` 멤버는 없는 것으로 본다. 모델 함수의 `as_of`·`today` 인자는 받지 않는다(시험용 — DEVIATIONS FC-ARGS).
       required: [region]
       properties:
         region:
@@ -2348,7 +2348,7 @@ components:
       additionalProperties: true
       description: |
         모델 `forecast()` 반환값 그대로(필드 추가·삭제·반올림 없음). 아래는 모델팀 계약이 적은 필드 — 계약에 없는 필드도 그대로 지나간다.
-        표시 규칙(00-decisions F17): value_source·skill·count_skill·display_hint·persistent_source_cells·필수 문구.
+        표시 규칙: value_source·skill·count_skill·display_hint·persistent_source_cells·필수 문구.
       properties:
         product: {type: string, examples: [FireOutlook Planner]}
         region: {type: string, description: '"aoi_id <id>" | "bbox" | "polygon"', examples: [aoi_id SIDO_51]}
@@ -2413,13 +2413,13 @@ components:
         source: {type: string, description: 'daily model | monthly model h=N x daily weights | baseline (current month)'}
     DataRelease:
       type: string
-      description: 적재한 모델 release 태그. v1.1 이하는 쓰지 않는다(F15).
+      description: 적재한 모델 release 태그. v1.1 이하는 쓰지 않는다.
       examples: [data-v1.2-2026-11-15]
     Coverage:
       type: object
       additionalProperties: false
       description: |
-        「자료 없음」 표현(F15). 오류가 아니라 200 + 빈 배열/null 값 + 이 객체.
+        「자료 없음」 표현. 오류가 아니라 200 + 빈 배열/null 값 + 이 객체.
         화면은 `available=false` 일 때 「이 지역 자료 없음」 한 줄만 쓰고 가짜 값·0 을 그리지 않는다.
         `available=true` 인데 배열이 비면 「자료는 있으나 해당 없음」(예 오늘 감지 없음)이다 — 둘을 섞지 않는다.
       required: [available, scope, reason]
@@ -2570,7 +2570,7 @@ components:
         country: {type: [string, 'null'], description: 'ISO3(KR 사건은 KOR — AOI id KR 과 다름). 이웃 나라 행: KR region PRK 453·null 1, ARG region PRY 3,557·BOL 721·BRA 699·URY 232·CHL 221·null 28 (잼)'}
         adm1_code: {type: [string, 'null'], description: "'ADM1_' + adm1_code = aoi_list id (예 KOR-2498, ARG-1271)"}
         sido_nm: {type: [string, 'null']}
-        sgg_cd: {type: [string, 'null'], description: '대표 시군구 코드 하나(SGG_<cd> 로 aoi_list 에 230종 전부 있음). sgg_nm 과 어긋난 행 16건이 있어 AOI 거르기에는 쓰지 않는다(잼, 쟁점 F15-Q3)'}
+        sgg_cd: {type: [string, 'null'], description: '대표 시군구 코드 하나(SGG_<cd> 로 aoi_list 에 230종 전부 있음). sgg_nm 과 어긋난 행 16건이 있어 AOI 거르기에는 쓰지 않는다(잼, 쟁점 V12-Q3)'}
         sgg_nm: {type: [string, 'null']}
         sgg_all: {type: [string, 'null'], description: 쉼표 구분 시군구 이름(파일 그대로)}
     FireEventList:

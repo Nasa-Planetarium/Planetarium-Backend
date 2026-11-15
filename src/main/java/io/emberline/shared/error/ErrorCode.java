@@ -38,21 +38,21 @@ public enum ErrorCode {
      */
     NOT_ACCEPTABLE(10003, "not_acceptable", 406, null),
     /**
-     * why: P2 huge URL.
+     * why: huge URL.
      * what: container URL limit (8 KB).
      * how: 400, the limit in {@code detail}.
      * opinion: publishing the limit costs nothing.
      */
     QUERY_TOO_LONG(10101, "range_too_large", 400, null),
     /**
-     * why: P2 huge body.
+     * why: huge body.
      * what: request body over 256 KB.
      * how: 413, the limit in {@code detail}.
      * opinion: 413 by HTTP meaning; clients branch on {@code code}, so the status does not break them.
      */
     BODY_TOO_LARGE(10102, "range_too_large", 413, null),
     /**
-     * why: P1 scraper or over-eager refresh.
+     * why: scraper or over-eager refresh.
      * what: RateLimitFilter.
      * how: 429 with an integer {@code Retry-After}, written by ProblemWriter, counted per minute.
      * opinion: no event per request (log flood).
@@ -95,14 +95,14 @@ public enum ErrorCode {
      */
     INVALID_GEOMETRY(40001, "invalid_param", 400, null),
     /**
-     * why: P1·P2 cost attack.
+     * why: cost attack.
      * what: query cost rule (period, area × days, limit).
      * how: 400 with {@code param}, hint to /api/v1/cells.
      * opinion: the wider the query, the more it should use pre-aggregates.
      */
     OBSERVATION_RANGE_TOO_LARGE(40101, "range_too_large", 400, null),
     /**
-     * why: P2 polygon bomb.
+     * why: polygon bomb.
      * what: polygon converter (vertices over 5,000 or rings over 50), counted while parsing.
      * how: 400 with {@code param=polygon}.
      * opinion: same code as prototype v3; count before JTS isValid.
@@ -145,7 +145,7 @@ public enum ErrorCode {
      */
     DATE_AND_RANGE(40004, "invalid_param", 400, null),
     /**
-     * why: P1·P2 cost attack on the largest table (97.8 M rows).
+     * why: cost attack on the largest table (97.8 M rows).
      * what: {@code /cells/frp} limits — estimated rows (cells × period) ≤ 50,000, day period ≤ 31 days, month period
      * ≤ 24 months ({@code Version.limits} frp_rows, frp_day_days, frp_month_months).
      * how: 400 with {@code param}, the limit in {@code detail}.
@@ -195,7 +195,7 @@ public enum ErrorCode {
      */
     FORECAST_INVALID_PERIOD(40006, "invalid_param", 400, null),
     /**
-     * why: P2 polygon bomb on the forecast route.
+     * why: polygon bomb on the forecast route.
      * what: {@code POST /forecast} GeoJSON region with more positions (all rings of all polygons) than
      * {@code Version.limits} forecast_polygon_vertices.
      * how: 400 with {@code param=region}, the limit in {@code detail}.
@@ -210,7 +210,7 @@ public enum ErrorCode {
      */
     FORECAST_RANGE_TOO_LARGE(40109, "range_too_large", 400, null),
     /**
-     * why: P2 huge body on the one public POST route.
+     * why: huge body on the one public POST route.
      * what: {@code POST /forecast} body over {@code Version.limits} forecast_body_bytes, counted while reading.
      * how: 413, the limit in {@code detail}; the body is never parsed.
      * opinion: same 413 as 10102 by HTTP meaning; its own number because the limit is the route's, not the container's.
@@ -307,7 +307,7 @@ public enum ErrorCode {
      * why: no or expired session.
      * what: AuthenticationEntryPoint.
      * how: 401 through ProblemWriter.
-     * opinion: B5.
+     * opinion: security review.
      */
     UNAUTHORIZED(70301, "unauthorized", 401, null),
     /**
@@ -321,7 +321,7 @@ public enum ErrorCode {
      * why: P5 cross-site request forgery.
      * what: CSRF filter.
      * how: 403, recorded.
-     * opinion: B5.
+     * opinion: security review.
      */
     CSRF_REJECTED(70303, "csrf_rejected", 403, null),
     /**
@@ -342,14 +342,14 @@ public enum ErrorCode {
      * why: the same Idempotency-Key with a different body.
      * what: unique constraint.
      * how: 409; the same key with the same body replays the original response.
-     * opinion: B5.
+     * opinion: security review.
      */
     IDEMPOTENCY_CONFLICT(80201, "conflict", 409, null),
     /**
      * why: If-Match does not match.
      * what: version column.
      * how: 412 with the current ETag.
-     * opinion: B5.
+     * opinion: security review.
      */
     PRECONDITION_FAILED(80202, "conflict", 412, null),
     /**
@@ -360,7 +360,7 @@ public enum ErrorCode {
      */
     INTERNAL(90901, "internal", 500, null),
     /**
-     * why: P2 burst or a legitimate surge.
+     * why: burst or a legitimate surge.
      * what: bulkhead (4 heavy requests per pod), 10 s request limit, statement_timeout 5 s.
      * how: 503 with {@code Retry-After}.
      * opinion: reject at once instead of queueing — the host has run out of memory before.

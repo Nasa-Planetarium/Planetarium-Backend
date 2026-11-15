@@ -5,7 +5,7 @@ import io.emberline.observation.domain.CellCase;
 import io.emberline.observation.domain.CellRow;
 import org.springframework.stereotype.Component;
 
-/** E2: value null (missing month) — served as null with status missing, never as 0; no interval either. */
+/** value null (missing month) — served as null with status missing, never as 0; no interval either. */
 @Component
 class MissingValueHandler implements CellCaseHandler {
 

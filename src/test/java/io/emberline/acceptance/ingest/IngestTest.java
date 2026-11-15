@@ -1,4 +1,4 @@
-package io.emberline.b1;
+package io.emberline.acceptance.ingest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,9 +23,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-/** B1.02–B1.06 and the data rules (A1, E2, E3) through the ingest CLI wiring, one database, core active first. */
+/** the data rules through the ingest CLI wiring, one database, core active first. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class B1IngestTest {
+class IngestTest {
 
     String url;
     DataSource ds;
@@ -175,18 +175,18 @@ class B1IngestTest {
     @Test
     void valuesAreStoredAsInTheFiles() throws Exception {
         String id = scalar("SELECT id FROM ingest.release WHERE release_key = 'core'");
-        // A1: no recomputation — every stored value equals the file's value bit for bit
+        // no recomputation — every stored value equals the file's value bit for bit
         assertThat(column("SELECT value, value_lo, value_hi FROM harmonized.aoi_month WHERE release_id = " + id + " ORDER BY aoi_id, year, month"))
                 .isEqualTo(duckColumn("SELECT value, value_lo, value_hi FROM read_parquet(?) ORDER BY aoi_id, year, month", Duck.core("aoi_month.parquet")));
         assertThat(column("SELECT percentile, ratio_to_median, baseline_median FROM harmonized.aoi_month_compare WHERE release_id = " + id + " ORDER BY aoi_id, year, month"))
                 .isEqualTo(duckColumn("SELECT percentile, ratio_to_median, baseline_median FROM read_parquet(?) ORDER BY aoi_id, year, month", Duck.core("aoi_month_compare.parquet")));
         assertThat(column("SELECT value, value_lo, value_hi, cell_lat, cell_lon FROM observation.cell_month WHERE release_id = " + id + " ORDER BY year, month, cell_id"))
                 .isEqualTo(duckColumn("SELECT value, value_lo, value_hi, cell_lat, cell_lon FROM read_parquet(?) ORDER BY year, month, cell_id", Duck.core("harmonized_cell_month.parquet")));
-        // E2: the missing month keeps NULL with status missing — never 0
+        // the missing month keeps NULL with status missing — never 0
         assertThat(scalar("SELECT count(*) FROM harmonized.aoi_month WHERE release_id = " + id + " AND year = 2001 AND month = 6 AND value IS NULL AND status = 'missing'"))
                 .isEqualTo(String.valueOf(Duck.query("SELECT count(*) FROM read_parquet(?) WHERE year = 2001 AND month = 6", Duck.core("aoi_month.parquet")).get(0).get(0)));
         assertThat(scalar("SELECT count(*) FROM harmonized.aoi_month WHERE release_id = " + id + " AND status = 'missing' AND value = 0")).isEqualTo("0");
-        // E3: out-of-interval cell values are kept as they are
+        // out-of-interval cell values are kept as they are
         assertThat(scalar("SELECT count(*) FROM observation.cell_month WHERE release_id = " + id + " AND (value < value_lo OR value > value_hi)"))
                 .isEqualTo(String.valueOf(Duck.query("SELECT count(*) FROM read_parquet(?) WHERE value < value_lo OR value > value_hi",
                         Duck.core("harmonized_cell_month.parquet")).get(0).get(0)));
@@ -194,7 +194,7 @@ class B1IngestTest {
         assertThat(scalar("SELECT value FROM harmonized.aoi_month WHERE release_id = " + id + " AND aoi_id = 'KR' AND year = 2025 AND month = 3")).isEqualTo("2764");
         assertThat(scalar("SELECT verdict || ' ' || percentile || ' ' || ratio_to_median FROM harmonized.aoi_month_compare WHERE release_id = " + id
                 + " AND aoi_id = 'KR' AND year = 2025 AND month = 3")).isEqualTo("above 100 10.924901185770752");
-        // partitions are attached children of LIST-partitioned parents (9 = B1's 8 + harmonized.cell_center, B2)
+        // partitions are attached children of LIST-partitioned parents (9 = 's 8 + harmonized.cell_center)
         assertThat(scalar("SELECT count(*) FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid WHERE c.relname LIKE '%\\_r" + id + "'")).isEqualTo("9");
     }
 }

@@ -1,4 +1,4 @@
--- platform: consumer inbox (B4). One row per (consumer, eventId) handled; the insert and the handler share a transaction.
+-- platform: consumer inbox. One row per (consumer, eventId) handled; the insert and the handler share a transaction.
 CREATE TABLE IF NOT EXISTS processed_event
 (
     consumer     TEXT                     NOT NULL,

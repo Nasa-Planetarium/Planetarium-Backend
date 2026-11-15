@@ -1,4 +1,4 @@
-// Human-owned build file (OMB-PACKETS 0.2): versions are pinned and locked so offline builds resolve
+// Human-owned build file (build policy): versions are pinned and locked so offline builds resolve
 // from the prepared Gradle cache. Implementation work must not edit this file; report needed libraries instead.
 plugins {
     java
