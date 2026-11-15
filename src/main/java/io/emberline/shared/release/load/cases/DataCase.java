@@ -11,7 +11,7 @@ public enum DataCase {
     MISSING_MONTH_WITH_VALUE,
     /** value NULL while status is not missing: the file contradicts itself → reject. */
     NULL_VALUE_NOT_MISSING,
-    /** value outside [value_lo, value_hi] (441,269 cell rows): value kept, the read side does not use that interval (E3). */
+    /** value outside [value_lo, value_hi] (441,269 cell rows): value and interval kept and served as stored, flagged on read (E3). */
     VALUE_OUTSIDE_INTERVAL,
     /**
      * value_lo greater than value_hi, both bounds finite (v1.2: 8,162 cell and 8 aoi rows, at most 1.7e-5): kept as stored

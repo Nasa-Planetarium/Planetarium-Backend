@@ -35,11 +35,11 @@ class B2UnitTest {
     }
 
     @Test
-    void valueOutsideIntervalKeepsValueDropsInterval() {
+    void valueOutsideIntervalKeepsValueAndStoredInterval() {
         Reading r = ReadCaseRegistry.apply(Reading.of(10.0, 2.0, 8.0, "ok"));
         assertThat(r.value()).isEqualTo(10.0);
-        assertThat(r.valueLo()).isNull();
-        assertThat(r.valueHi()).isNull();
+        assertThat(r.valueLo()).isEqualTo(2.0);
+        assertThat(r.valueHi()).isEqualTo(8.0);
         assertThat(r.flags()).containsExactly("interval_out_of_range");
         Reading below = ReadCaseRegistry.apply(Reading.of(1.0, 2.0, 8.0, "ok"));
         assertThat(below.value()).isEqualTo(1.0);

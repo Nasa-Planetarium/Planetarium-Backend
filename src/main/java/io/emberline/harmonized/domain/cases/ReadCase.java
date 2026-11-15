@@ -9,7 +9,7 @@ public enum ReadCase {
     MISSING_MONTH,
     /** v1.1: status partial → value is month-to-date, value_projected/as_of_date passed, verdict uncertain. docs/cases/partial_month.md */
     PARTIAL_MONTH,
-    /** E3: value outside [value_lo, value_hi] → value kept, interval nulled, flag interval_out_of_range. docs/cases/interval_out_of_range.md */
+    /** E3: value outside [value_lo, value_hi] → value and interval kept as stored, flag interval_out_of_range. docs/cases/interval_out_of_range.md */
     INTERVAL_OUT_OF_RANGE,
     /** Terra-only period: value present, value_lo/value_hi null → kept null, flag interval_unavailable. docs/cases/interval_unavailable.md */
     INTERVAL_UNAVAILABLE,

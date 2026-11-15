@@ -40,8 +40,8 @@ columns and kinds (aliases `name→name_ko`, `parent_aoi→parent_id`, v0 column
 `NEGATIVE_VALUE` (value / value_lo / value_hi < 0, v1.2) keep as stored, warning `NEGATIVE_VALUE:<file>:<n> rows kept as
 stored; drawn as 0` · `INTERVAL_INVERTED` (value_lo > value_hi, both bounds finite, any size; v1.2: 8,162 cell-month and
 8 aoi-month rows, at most 1.7e-5) keep as stored, warning `INTERVAL_INVERTED:<file>:<n> rows kept as stored`; the read
-side serves value / value_lo / value_hi as stored, never reordered or clamped (E3 `interval_out_of_range` still nulls the
-band on the AOI endpoints when the value lies outside it), and the display rule (lo = min(lo, hi, value), hi = max(lo, hi,
+side serves value / value_lo / value_hi as stored, never reordered, clamped or nulled (E3 `interval_out_of_range` only
+flags a value outside its band), and the display rule (lo = min(lo, hi, value), hi = max(lo, hi,
 value), no band when lo is null) belongs to the front · `NULL_VALUE_NOT_MISSING` / `INTERVAL_INVERTED_NOT_FINITE`
 (value_lo > value_hi with a NaN or infinite bound) / `NEGATIVE_COUNT` (raw_modis, raw_viirs,
 n_cells < 0) reject. A rejected release leaves no partitions and

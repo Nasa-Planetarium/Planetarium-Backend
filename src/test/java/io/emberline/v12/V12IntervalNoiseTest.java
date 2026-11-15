@@ -39,7 +39,7 @@ import tools.jackson.databind.json.JsonMapper;
  * pl-v12c (CMD-bb9a2543f9e6): every value_lo above value_hi is kept as stored with one INTERVAL_INVERTED warning per file,
  * whatever its size, and /cells and /aois/{id}/calendar serve value, value_lo, value_hi as stored (the front orders the
  * band). Releases over owner fixture core-v11: {@code noise} (one cell month lo-hi = 5e-6, one KR aoi month lo-hi =
- * 1e-9 x value), {@code edge} (one cell month lo-hi = exactly 1e-4), {@code wide} (one cell month lo-hi = 2e-4),
+ * 2e-6), {@code edge} (one cell month lo-hi = exactly 1e-4), {@code wide} (one cell month lo-hi = 2e-4),
  * {@code clean} (core-v11 as is, no inversion).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -117,11 +117,10 @@ class V12IntervalNoiseTest {
             Path noise = copy(root.resolve("noise"));
             rewrite(noise, "harmonized_cell_month.parquet", "SELECT * REPLACE ("
                     + cell(NOISE_CELL, "value_lo", "value + 2.5e-6") + ", " + cell(NOISE_CELL, "value_hi", "value - 2.5e-6") + ") FROM src");
-            // within E3's slack (IntervalOutOfRangeHandler, 1e-9 x |value|) so the calendar keeps the band instead of nulling it
             String kr = "aoi_id = 'KR' AND year = " + KR_MONTH[0] + " AND month = " + KR_MONTH[1];
             rewrite(noise, "aoi_month.parquet", "SELECT * REPLACE ("
-                    + "CASE WHEN " + kr + " THEN value + 5e-10 * abs(value) ELSE value_lo END AS value_lo, "
-                    + "CASE WHEN " + kr + " THEN value - 5e-10 * abs(value) ELSE value_hi END AS value_hi) FROM src");
+                    + "CASE WHEN " + kr + " THEN value + 1e-6 ELSE value_lo END AS value_lo, "
+                    + "CASE WHEN " + kr + " THEN value - 1e-6 ELSE value_hi END AS value_hi) FROM src");
             resum(noise);
             Path edge = copy(root.resolve("edge"));
             rewrite(edge, "harmonized_cell_month.parquet", "SELECT * REPLACE (" + cell(EDGE_CELL, "value", "0.0::DOUBLE") + ", "
