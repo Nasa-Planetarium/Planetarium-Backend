@@ -21,3 +21,4 @@ Status column: **served** = implemented in `HandoffAliasTable` now (B1); later p
 | `/api/status` | `/status` | `GET getSatelliteStatus` | `/api/v1/satellite-status` | `start` → start; `end` → end | served |
 | `/api/method` | `/method` | `GET getCurrentMethod` | `/api/v1/methods/current` | — | served |
 | `/api/firms/wms` | `/firms/wms` | `GET getFirmsWmsTile` | `/api/v1/firms/wms-tiles` | `layer` → layer; `bbox` → bbox; `width` → width; `height` → height; `time` → time | later packet |
+| `/api/forecast` | `/forecast` (POST) | `POST postForecast` | `/api/v1/forecast` | 본문 그대로 (`region`, `horizon_days`, `start`, `end`) — 같은 검증·캐시·속도 제한 통 (MAPPING §9.1) | served (F17) |

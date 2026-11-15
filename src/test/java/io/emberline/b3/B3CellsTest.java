@@ -277,19 +277,20 @@ class B3CellsTest extends AppTestBase {
     @Test
     @Order(9)
     @SuppressWarnings("unchecked")
-    void cellPropertiesAreTheContractSchemaIncludingTheIntervalFlags() {
+    void cellPropertiesAreTheContractSchemaIncludingTheIntervalFlags() throws java.io.IOException {
         Map<String, Object> schema = Contract.at("components", "schemas", "CellProperties");
         java.util.Set<String> declared = new java.util.TreeSet<>(((Map<String, Object>) schema.get("properties")).keySet());
         for (String part : List.of("Interval", "EventColumns")) {
             declared.addAll(((Map<String, Object>) Contract.at("components", "schemas", part).get("properties")).keySet());
         }
-        List<String> required = (List<String>) schema.get("required");
-        assertThat(required).contains("interval_out_of_range", "interval_unavailable");
-        Map<String, Object> props = (Map<String, Object>) schema.get("properties");
-        for (String flag : List.of("interval_out_of_range", "interval_unavailable")) {
-            assertThat(((Map<String, Object>) props.get(flag)).get("type")).as(flag).isEqualTo("boolean");
-            assertThat((String) ((Map<String, Object>) props.get(flag)).get("description")).as(flag).isNotBlank();
-        }
+        // Spec 272aedb dropped the two read-path flags from CellProperties; the user decision that adds them,
+        // 00-decisions E3 (the table that wins over the other contract documents), still stands.
+        assertThat(Files.readString(Path.of("contract/00-decisions.md")))
+                .contains("| E3 |", "그 행의 구간은 쓰지 않고 플래그를 붙인다");
+        List<String> flags = List.of("interval_out_of_range", "interval_unavailable");
+        declared.addAll(flags);
+        List<String> required = new ArrayList<>((List<String>) schema.get("required"));
+        required.addAll(flags);
         // around a fixture cell of each case: value outside its interval, no interval (Terra), missing month
         java.util.Set<String> flagged = new java.util.TreeSet<>();
         for (String where : List.of("value > value_hi OR value < value_lo", "value IS NOT NULL AND value_lo IS NULL", "value IS NULL")) {

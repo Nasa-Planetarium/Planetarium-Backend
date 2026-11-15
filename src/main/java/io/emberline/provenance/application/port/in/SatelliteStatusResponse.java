@@ -1,28 +1,23 @@
 package io.emberline.provenance.application.port.in;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
-import java.util.Map;
 
 /**
- * GET /api/v1/satellite-status. Without satellite_day_status in the release (v1-m2v-2026-11-14) the answer is month
- * level ({@code granularity: month}, {@code day_level: not_provided}) from the release's month status — see
- * docs/DEVIATIONS.md. {@code days} only appears when the release ships day-level status.
+ * GET /api/v1/satellite-status (contract {@code SatelliteStatus}, v1.2): {@code freq=day} → {@code days[]} from
+ * satellite_day_status (UTC dates), {@code freq=month} → {@code months[]} from satellite_month_status; the other array
+ * is empty. {@code start}/{@code end} are the range applied (null for an open month range), {@code through} is the
+ * file's last {@code date_utc}. Values and codes are the files' (satellite names, statuses, notes as stored).
  */
-public record SatelliteStatusResponse(String start, String end, String granularity, String dayLevel, String updatedAt,
-                                      List<Satellite> satellites, List<Month> months,
-                                      @JsonInclude(JsonInclude.Include.NON_NULL) List<Day> days, String methodVersion) {
+public record SatelliteStatusResponse(String start, String end, String freq, String through, List<Day> days,
+                                      List<Month> months, String methodVersion, String dataRelease) {
 
-    /** One satellite behind the months in range. */
-    public record Satellite(String satellite, String instrument, String firstDate, String lastDate, Map<String, Integer> months) {
+    /** Contract {@code SatelliteDayStatus}: the served columns of satellite_day_status (MAPPING §8.2). */
+    public record Day(String satellite, String dateUtc, String status, Long nDetGlobal, String coverage,
+                      Double ratioToSeasonal, String note) {
     }
 
-    /** One month in range; out_of_range when the release has no row for it. */
-    public record Month(String yearMonth, int year, int month, String valueSource, String dataSource, String status,
-                        List<String> satellites) {
-    }
-
-    /** One satellite-day (only from satellite_day_status): satellite, status and note as the file has them. */
-    public record Day(String date, String satellite, String status, String dataSource, String note) {
+    /** Contract {@code SatelliteMonthStatus}: a satellite_month_status row. */
+    public record Month(String satellite, int year, int month, Integer obsDays, Integer lowDays, Integer missingDays,
+                        Integer daysInMonth, String firstDay, String lastDay, String monthStatus) {
     }
 }

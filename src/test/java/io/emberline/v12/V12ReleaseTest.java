@@ -3,6 +3,7 @@ package io.emberline.v12;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.emberline.platform.flyway.MultiSchemaFlywayRunner;
+import io.emberline.support.Contract;
 import io.emberline.support.EmbeddedPg;
 import io.emberline.support.Fixtures;
 import io.emberline.support.IngestCli;
@@ -22,7 +23,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -225,11 +228,13 @@ class V12ReleaseTest {
     void realSatelliteDayStatusStagesAndStatusServesItsDaysAndNotes() throws SQLException {
         assertThat(v12.aliases()).contains("date_utc->date");
         assertThat(scalar("SELECT count(*) FROM provenance.satellite_day WHERE release_id = " + releaseId("v12"))).isEqualTo("4");
+        // the contract SatelliteStatus shape (freq, days[] with date_utc, months[]); full rows are P3-6
         JsonNode s = json(get("/api/v1/satellite-status?start=2026-11-12&end=2026-11-14"));
-        assertThat(s.get("granularity").asString()).isEqualTo("day");
-        assertThat(s.get("day_level").asString()).isEqualTo("provided");
+        assertThat(s.get("freq").asString()).isEqualTo("day");
+        assertThat(s.get("through").asString()).isEqualTo("2026-11-14");
+        assertThat(s.get("months")).isEmpty();
         List<String> rows = new ArrayList<>();
-        s.get("days").forEach(d -> rows.add(d.get("date").asString() + " " + d.get("satellite").asString() + " " + d.get("status").asString()
+        s.get("days").forEach(d -> rows.add(d.get("date_utc").asString() + " " + d.get("satellite").asString() + " " + d.get("status").asString()
                 + " " + (d.get("note").isNull() ? "null" : d.get("note").asString())));
         assertThat(rows).containsExactly("2026-11-12 NOAA-20 ok null", "2026-11-13 NOAA-20 low low_multi_sat_reception_outage",
                 "2026-11-13 S-NPP missing earlier_nrt_gap_refilled", "2026-11-14 NOAA-21 partial partial_current_day");
@@ -281,11 +286,43 @@ class V12ReleaseTest {
         assertThat(m.get("method_version").asString()).isEqualTo("v1-m2v-2026-11-14");
     }
 
+    /**
+     * F3 / criterion 12: {@code Method.display_names} (internal id → screen name) = the contract's
+     * {@code info.x-display-names} without its {@code description} / {@code performance_copy} keys, and
+     * {@code Method.performance_copy} = that {@code performance_copy}; on /methods/current and /methods/{v}. The values
+     * the method lists stay internal ids. The release carries neither field (DEVIATIONS).
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void methodServesTheContractDisplayNamesAndPerformanceCopy() {
+        Map<String, Object> names = new LinkedHashMap<>(Contract.at("info", "x-display-names"));
+        Object copy = names.remove("performance_copy");
+        names.remove("description");
+        assertThat(names).containsOnlyKeys("m2v_xgb", "m2v_xgb_terra", "m2v_q10_q90", "n20_bridge");
+        Map<String, Object> schema = (Map<String, Object>) Contract.at("components", "schemas", "Method", "properties");
+        assertThat(schema).containsKeys("display_names", "performance_copy");
+        JsonNode current = json(get("/api/v1/methods/current"));
+        String version = current.get("method_version").asString();
+        for (JsonNode m : List.of(current, json(get("/api/v1/methods/" + version)))) {
+            assertThat(m.get("display_names").isObject()).isTrue();
+            Map<String, Object> served = new LinkedHashMap<>();
+            m.get("display_names").properties().forEach(e -> served.put(e.getKey(), e.getValue().asString()));
+            assertThat(served).containsExactlyEntriesOf(names);
+            assertThat(m.get("performance_copy").asString()).isEqualTo(copy).isEqualTo("총량 오차 1~2%, 월별 상관 0.97");
+            List<String> fields = new ArrayList<>();
+            m.properties().forEach(e -> fields.add(e.getKey()));
+            assertThat(fields).as("only contract Method properties").isSubsetOf(schema.keySet());
+            m.get("value_sources").forEach(v -> assertThat(names).doesNotContainValue(v.get("value_source").asString()));
+        }
+    }
+
     @Test
     void openapiDescriptionsShowDisplayNamesAndKeepTheEnum() throws IOException {
         String yaml = Files.readString(Path.of("contract/openapi.yaml"));
-        assertThat(yaml).contains("FireBridge = `m2v_xgb`", "FireBridge-Terra = `m2v_xgb_terra`",
-                "FireBridge Uncertainty Band = `m2v_q10_q90`", "N20 Bridge = `n20_bridge`", "총량 오차 1~2%, 월별 상관 0.97");
+        // spec 272aedb: the display names moved from the info text into the info.x-display-names map (internal id → name)
+        assertThat(yaml).contains("  x-display-names:", "    m2v_xgb: FireBridge (MODIS-to-VIIRS Harmonizer)",
+                "    m2v_xgb_terra: FireBridge-Terra", "    m2v_q10_q90: FireBridge Uncertainty Band",
+                "    n20_bridge: N20 Bridge", "    performance_copy: 총량 오차 1~2%, 월별 상관 0.97");
         assertThat(yaml).contains("enum: [modis_m2v_terra, modis_m2v, snpp_observed, n20_bridge, n21_bridge]");
     }
 }

@@ -2,8 +2,8 @@ package io.emberline.provenance.adapter.out.persistence;
 
 import io.emberline.provenance.application.port.out.ProvenanceReadPort;
 import io.emberline.provenance.domain.MethodMeta;
-import io.emberline.provenance.domain.MonthStatus;
 import io.emberline.provenance.domain.SatelliteDay;
+import io.emberline.provenance.domain.SatelliteMonth;
 import io.emberline.shared.error.DataUnavailableException;
 import io.emberline.shared.error.ErrorCode;
 import io.emberline.shared.sql.SqlResource;
@@ -33,13 +33,6 @@ class ProvenanceJdbcRepository implements ProvenanceReadPort {
     }
 
     @Override
-    public List<MonthStatus> monthStatus(long releaseId) {
-        return translate(() -> jdbc.sql(SqlResource.text("provenance/select_month_status.sql")).param("releaseId", releaseId)
-                .query((rs, n) -> new MonthStatus(rs.getInt("year"), rs.getInt("month"), rs.getString("value_source"),
-                        rs.getString("data_source"), rs.getString("status"))).list());
-    }
-
-    @Override
     public List<SatelliteDay> satelliteDays(long releaseId, LocalDate start, LocalDate end) {
         return translate(() -> jdbc.sql(SqlResource.text("provenance/select_satellite_day.sql")).param("releaseId", releaseId)
                 .param("start", start).param("end", end)
@@ -47,14 +40,26 @@ class ProvenanceJdbcRepository implements ProvenanceReadPort {
                     Timestamp up = rs.getTimestamp("updated_at");
                     return new SatelliteDay(rs.getString("satellite"), rs.getObject("date", LocalDate.class),
                             rs.getString("status"), rs.getString("data_source"), up == null ? null : up.toInstant(),
-                            rs.getString("note"));
+                            rs.getString("note"), rs.getObject("n_det_global", Long.class), rs.getString("coverage"),
+                            rs.getObject("ratio_to_seasonal", Double.class));
                 }).list());
     }
 
     @Override
-    public boolean hasSatelliteDays(long releaseId) {
-        return translate(() -> jdbc.sql(SqlResource.text("provenance/select_satellite_day_exists.sql"))
-                .param("releaseId", releaseId).query(Boolean.class).single());
+    public Optional<LocalDate> satelliteDayThrough(long releaseId) {
+        List<LocalDate> through = translate(() -> jdbc.sql(SqlResource.text("provenance/select_satellite_day_through.sql"))
+                .param("releaseId", releaseId).query((rs, n) -> rs.getObject(1, LocalDate.class)).list());
+        return through.isEmpty() ? Optional.empty() : Optional.ofNullable(through.get(0));
+    }
+
+    @Override
+    public List<SatelliteMonth> satelliteMonths(long releaseId) {
+        return translate(() -> jdbc.sql(SqlResource.text("provenance/select_satellite_month.sql")).param("releaseId", releaseId)
+                .query((rs, n) -> new SatelliteMonth(rs.getString("satellite"), rs.getInt("year"), rs.getInt("month"),
+                        rs.getObject("obs_days", Integer.class), rs.getObject("low_days", Integer.class),
+                        rs.getObject("missing_days", Integer.class), rs.getObject("days_in_month", Integer.class),
+                        rs.getObject("first_day", LocalDate.class), rs.getObject("last_day", LocalDate.class),
+                        rs.getString("month_status"))).list());
     }
 
     private static <T> T translate(Supplier<T> query) {

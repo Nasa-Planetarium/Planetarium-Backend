@@ -249,30 +249,19 @@ class B1ApiTest extends AppTestBase {
 
     @Test
     @Order(9)
-    void b1_14_satelliteStatusIsMonthLevelFromTheFiles() {
-        HttpResponse<String> r = get("/api/v1/satellite-status?start=2025-03-01&end=2025-03-31");
-        assertThat(r.statusCode()).isEqualTo(200);
-        JsonNode body = json(r);
-        assertThat(body.get("granularity").asString()).isEqualTo("month");
-        assertThat(body.get("day_level").asString()).isEqualTo("not_provided");
-        assertThat(body.has("days")).isFalse();
-        assertThat(body.get("start").asString()).isEqualTo("2025-03-01");
-        assertThat(body.get("end").asString()).isEqualTo("2025-03-31");
-        List<List<Object>> world = Duck.query("SELECT value_source, data_source, status FROM read_parquet(?) WHERE aoi_id = 'WORLD' AND year = 2025 AND month = 3",
-                Duck.core("aoi_month.parquet"));
-        JsonNode march = body.get("months").get(0);
-        assertThat(body.get("months")).hasSize(1);
-        assertThat(march.get("year_month").asString()).isEqualTo("2025-03");
-        assertThat(march.get("value_source").asString()).isEqualTo(world.get(0).get(0));
-        assertThat(march.get("data_source").asString()).isEqualTo(world.get(0).get(1));
-        assertThat(march.get("status").asString()).isEqualTo(world.get(0).get(2));
-        assertThat(body.get("satellites").get(0).get("satellite").asString()).isEqualTo("N");
-        assertThat(body.get("method_version").asString()).isEqualTo(META_MV);
-
-        JsonNode missing = json(get("/api/v1/satellite-status?start=2001-06-01&end=2001-06-30"));
-        assertThat(missing.get("months").get(0).get("status").asString()).isEqualTo("missing");
-        JsonNode outside = json(get("/api/v1/satellite-status?start=2000-01-01&end=2000-01-31"));
-        assertThat(outside.get("months").get(0).get("status").asString()).isEqualTo("out_of_range");
+    void b1_14_satelliteStatusWithoutTheSatelliteFilesIs503LayerNotLoaded() {
+        // /satellite-status serves satellite_day_status / satellite_month_status; the v1
+        // fixture core ships neither, so both freq answer 503 data_not_loaded 50502 (MAPPING §8.3 "파일 자체 없음").
+        // The day / month answers on the v1.2 files are P3-6 (io.emberline.f15p3.P3LayerApiTest).
+        for (String p : List.of("/api/v1/satellite-status?start=2025-03-01&end=2025-03-31",
+                "/api/v1/satellite-status?freq=month", "/api/v1/satellite-status")) {
+            HttpResponse<String> r = get(p);
+            assertThat(r.statusCode()).as(p).isEqualTo(503);
+            assertThat(json(r).get("code").asString()).as(p).isEqualTo("data_not_loaded");
+            assertThat(json(r).get("error_no").asInt()).as(p).isEqualTo(50502);
+            assertThat(r.headers().firstValue("Retry-After")).as(p).hasValue("60");
+            assertThat(r.headers().firstValue("Cache-Control")).as(p).hasValue("no-store");
+        }
         assertThat(json(get("/api/v1/satellite-status?start=2025-04-01&end=2025-03-01")).get("param").asString()).isEqualTo("start");
         assertThat(json(get("/api/v1/satellite-status?start=2025-02-30")).get("param").asString()).isEqualTo("start");
         assertThat(get("/api/v1/aois").statusCode()).isEqualTo(200);
@@ -308,10 +297,12 @@ class B1ApiTest extends AppTestBase {
     @Order(12)
     void b1_19_methodAndStatusAliases() {
         assertThat(json(get("/api/method"))).isEqualTo(json(get("/api/v1/methods/current")));
+        // core has no satellite files (b1_14): the alias reaches the same handler and answers the same 503 50502;
+        // alias = canonical on the v1.2 files is P3-6 (io.emberline.f15p3.P3LayerApiTest)
         HttpResponse<String> status = get("/api/status?start=2025-03-01&end=2025-03-31");
-        assertThat(status.statusCode()).isEqualTo(200);
-        assertThat(json(status)).isEqualTo(json(get("/api/v1/satellite-status?start=2025-03-01&end=2025-03-31")));
-        assertThat(status.headers().firstValue("Link")).hasValue("</api/v1/satellite-status?start=2025-03-01&end=2025-03-31>; rel=\"canonical\"");
+        HttpResponse<String> canonical = get("/api/v1/satellite-status?start=2025-03-01&end=2025-03-31");
+        assertThat(status.statusCode()).isEqualTo(canonical.statusCode()).isEqualTo(503);
+        assertThat(json(status).get("error_no")).isEqualTo(json(canonical).get("error_no"));
         assertThat(get("/api/unknown-alias").statusCode()).isEqualTo(404);
     }
 
@@ -324,24 +315,38 @@ class B1ApiTest extends AppTestBase {
         doc.get("paths").properties().forEach(e -> paths.add(e.getKey()));
         assertThat(paths).contains("/api/v1/aois", "/api/v1/aois/{aoiId}", "/api/v1/aois/{aoiId}/boundary",
                 "/api/v1/methods/current", "/api/v1/methods/{methodVersion}", "/api/v1/satellite-status", "/api/v1/version",
-                "/api/v1/cells", "/api/v1/hotspots", "/api/v1/firms/wms-tiles");
+                "/api/v1/cells", "/api/v1/hotspots", "/api/v1/firms/wms-tiles", "/api/v1/forecast");
         Map<String, Object> contractPaths = (Map<String, Object>) Contract.openapi().get("paths");
         for (String p : paths) {
             String contractPath = p.substring("/api/v1".length());
             assertThat(contractPaths).as("contract has %s", contractPath).containsKey(contractPath);
-            Set<String> served = new TreeSet<>();
-            JsonNode params = doc.get("paths").get(p).get("get").get("parameters");
-            if (params != null) {
-                params.forEach(n -> served.add(n.get("in").asString() + ":" + n.get("name").asString()));
+            Set<String> servedMethods = new TreeSet<>(doc.get("paths").get(p).propertyNames());
+            servedMethods.retainAll(Set.of("get", "post", "put", "patch", "delete"));
+            // every served operation is a contract operation of the same method (POST /forecast is the only POST)
+            assertThat(((Map<String, Object>) contractPaths.get(contractPath)).keySet()).as("methods of %s", p)
+                    .containsAll(servedMethods);
+            for (String method : servedMethods) {
+                JsonNode op = doc.get("paths").get(p).get(method);
+                Set<String> served = new TreeSet<>();
+                JsonNode params = op.get("parameters");
+                if (params != null) {
+                    params.forEach(n -> served.add(n.get("in").asString() + ":" + n.get("name").asString()));
+                }
+                assertThat(served).as("parameters of %s %s", method, p).isEqualTo(contractParams(contractPath, method));
+                assertThat(op.get("requestBody") != null).as("request body of %s %s", method, p)
+                        .isEqualTo(Contract.at("paths", contractPath, method).containsKey("requestBody"));
             }
-            assertThat(served).as("parameters of %s", p).isEqualTo(contractParams(contractPath));
         }
         assertThat(paths).noneMatch(p -> !p.startsWith("/api/v1/"));
     }
 
-    @SuppressWarnings("unchecked")
     static Set<String> contractParams(String path) {
-        Map<String, Object> op = (Map<String, Object>) ((Map<String, Object>) ((Map<String, Object>) Contract.openapi().get("paths")).get(path)).get("get");
+        return contractParams(path, "get");
+    }
+
+    @SuppressWarnings("unchecked")
+    static Set<String> contractParams(String path, String method) {
+        Map<String, Object> op = (Map<String, Object>) ((Map<String, Object>) ((Map<String, Object>) Contract.openapi().get("paths")).get(path)).get(method);
         Set<String> out = new TreeSet<>();
         List<Object> params = (List<Object>) op.getOrDefault("parameters", List.of());
         for (Object o : params) {

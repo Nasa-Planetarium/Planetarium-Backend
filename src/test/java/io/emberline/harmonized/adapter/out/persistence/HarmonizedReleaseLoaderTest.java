@@ -38,14 +38,23 @@ class HarmonizedReleaseLoaderTest {
     void cellDayCodesAreTheContractEnumPlusItsCellDayOnlyListAndMethodExplainsThem() {
         Map<String, Object> schema = Contract.at("components", "schemas", "ValueSource");
         Set<String> contract = new TreeSet<>((List<String>) schema.get("enum"));
-        List<String> cellDayOnly = (List<String>) schema.get("x-cell-day-only");
+        // Spec 272aedb dropped ValueSource.x-cell-day-only and its R-VS1 text; the list did not change, so the loader
+        // (ruling R-VS1, 00-decisions E1 「the file is canonical」) holds it: its codes beyond the contract enum.
+        Set<String> cellDayOnly = new TreeSet<>(HarmonizedReleaseLoader.CELL_DAY_SOURCES);
+        cellDayOnly.removeAll(contract);
         assertThat(cellDayOnly).containsExactlyInAnyOrder("modis_m2v_background", "modis_fallback_m2v_predicted");
+        assertThat(HarmonizedReleaseLoader.CELL_DAY_SOURCES).containsAll(contract);
+        if (schema.get("x-cell-day-only") != null) {
+            assertThat((List<String>) schema.get("x-cell-day-only")).containsExactlyInAnyOrderElementsOf(cellDayOnly);
+        }
         contract.addAll(cellDayOnly);
-        assertThat(new TreeSet<>(HarmonizedReleaseLoader.CELL_DAY_SOURCES)).isEqualTo(contract);
-        assertThat((String) schema.get("description")).contains(cellDayOnly);
         Set<String> method = new TreeSet<>();
         MethodDescription.VALUE_SOURCES.forEach(m -> method.add((String) m.get("value_source")));
         assertThat(method).isEqualTo(contract);
+        MethodDescription.VALUE_SOURCES.stream().filter(m -> cellDayOnly.contains(m.get("value_source"))).forEach(m -> {
+            assertThat((String) m.get("label_ko")).isNotBlank();
+            assertThat(m.get("files")).isEqualTo(List.of("harmonized_cell_day"));
+        });
     }
 
     @ParameterizedTest

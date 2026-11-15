@@ -15,9 +15,20 @@ import java.util.Objects;
  */
 public record ReleaseRef(long releaseId, String releaseKey, String methodVersion, String dataVersion, Instant loadedAt) {
 
+    private static final String DATA_PREFIX = "data-";
+
     public ReleaseRef {
         Objects.requireNonNull(releaseKey);
         Objects.requireNonNull(methodVersion);
         Objects.requireNonNull(dataVersion);
+    }
+
+    /**
+     * Contract {@code DataRelease} of the v1.2 layer answers: the release tag of the loaded folder, {@code data-} +
+     * release_key unless the key already starts with it (folder {@code v1.2-2026-11-15} → {@code data-v1.2-2026-11-15}).
+     * m2v_meta.json's own {@code data_release} still names v1.1 in the v1.2 release, so it is not used (no v1.1).
+     */
+    public String dataRelease() {
+        return releaseKey.startsWith(DATA_PREFIX) ? releaseKey : DATA_PREFIX + releaseKey;
     }
 }

@@ -21,8 +21,10 @@ public class ProblemFactory {
     /** Codes that tell the client when to come back. */
     private static final Map<ErrorCode, String> RETRY_AFTER = Map.of(
             ErrorCode.DATA_NOT_LOADED, "60",
+            ErrorCode.LAYER_NOT_LOADED, "60",
             ErrorCode.OVERLOADED, "5",
-            ErrorCode.UPSTREAM_UNAVAILABLE, "60");
+            ErrorCode.UPSTREAM_UNAVAILABLE, "60",
+            ErrorCode.FORECAST_UNAVAILABLE, "30");
 
     private final MessageSource messages;
     private final LocaleResolver localeResolver;

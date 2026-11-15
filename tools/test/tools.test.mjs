@@ -24,6 +24,8 @@ function fakeOrigin({ leak = null, limitEvery = 0 } = {}) {
     const path = new URL(req.url, 'http://x').pathname;
     if (path === leak) {
       res.writeHead(200, { 'content-type': 'application/json' }).end('{"status":"UP"}');
+    } else if (req.method === 'POST' && path === '/api/v1/forecast') {
+      res.writeHead(400, { 'content-type': 'application/problem+json' }).end('{"code":"invalid_param","error_no":40006}');
     } else if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.writeHead(405).end();
     } else if (!allowed.some((r) => r.test(path))) {
@@ -49,6 +51,8 @@ test('public-smoke passes against an allowlist origin, one line per row', async 
     assert.ok(lines.some((l) => l.startsWith('PASS GET /api/v1/methods/v1-x ')));
     assert.ok(lines.some((l) => l.startsWith('PASS POST /api/v1/aois → 405')));
     assert.ok(lines.some((l) => l.startsWith('PASS GET /actuator → 404')));
+    assert.ok(lines.some((l) => l.startsWith('PASS POST /api/v1/forecast (no period) → 400')));
+    assert.ok(lines.some((l) => l.startsWith('PASS POST /api/v1/forecast/ → 405')));
   } finally {
     server.close();
   }

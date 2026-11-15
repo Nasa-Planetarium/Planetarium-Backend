@@ -12,6 +12,6 @@ public final class KeepOutsideIntervalHandler implements DataCaseHandler {
 
     @Override
     public void handle(String file, long rows, ValidationReport report) {
-        report.warn("VALUE_OUTSIDE_INTERVAL", file, rows + " rows kept; interval not used for them");
+        report.warn("VALUE_OUTSIDE_INTERVAL", file, rows + " rows kept as stored; interval served as stored, interval_out_of_range on read");
     }
 }

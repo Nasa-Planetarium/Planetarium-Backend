@@ -39,20 +39,33 @@ public record EmberlineProperties(Cors cors, Limits limits, Errors errors, Relea
 
     /**
      * Field names become the snake_case keys of /api/v1/version {@code limits}. The /hotspots day spans are not here:
-     * they live in {@code emberline.hotspots.*} (one source for enforcement and /version).
+     * they live in {@code emberline.hotspots.*} (one source for enforcement and /version). The v1.2 layer limits
+     * (fire events … spread nowcast) are only advertised here; the layer packets enforce them from this record.
+     * The forecast limits ({@code POST /forecast}) are enforced by the outlook module's ForecastRequestFilter and
+     * ForecastBodyReader (docs/DEVIATIONS.md).
      */
     public record Limits(int hotspotsLimitMax, int summaryDayDays, int summaryMonthYears, int calendarYears,
-                         int polygonVertices, int cellsMax, int csvRows) {
+                         int polygonVertices, int cellsMax, int csvRows, int fireEventsLimitMax, int fireEventsDays,
+                         double layerBboxAreaDeg2, int frpRows, int frpDayDays, int frpMonthMonths,
+                         double frpBboxAreaDeg2, int fwiSeriesDays, int statusDayDays, int spreadCellsMax,
+                         int forecastBodyBytes, int forecastPolygonVertices, int forecastHorizonDaysMax,
+                         int forecastSpanDays) {
 
-        public static final Limits CONTRACT = new Limits(10000, 366, 40, 40, 5000, 10000, 100000);
+        public static final Limits CONTRACT = new Limits(10000, 366, 40, 40, 5000, 10000, 100000, 1000, 3700, 400, 50000,
+                31, 24, 100, 366, 366, 20000, 131072, 2000, 30, 400);
 
         public Limits {
             int[] all = {hotspotsLimitMax, summaryDayDays, summaryMonthYears, calendarYears, polygonVertices, cellsMax,
-                    csvRows};
+                    csvRows, fireEventsLimitMax, fireEventsDays, frpRows, frpDayDays, frpMonthMonths, fwiSeriesDays,
+                    statusDayDays, spreadCellsMax, forecastBodyBytes, forecastPolygonVertices, forecastHorizonDaysMax,
+                    forecastSpanDays};
             for (int v : all) {
                 if (v <= 0) {
                     throw new IllegalArgumentException("emberline.limits.* must be positive");
                 }
+            }
+            if (!(layerBboxAreaDeg2 > 0) || !(frpBboxAreaDeg2 > 0)) {
+                throw new IllegalArgumentException("emberline.limits.* must be positive");
             }
         }
     }

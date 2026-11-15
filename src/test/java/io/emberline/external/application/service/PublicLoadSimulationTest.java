@@ -189,6 +189,11 @@ class PublicLoadSimulationTest {
         assertThat(rl.heavy()).isEqualTo(new RateLimitProperties.Limit(3600L, 3600L, Duration.ofMinutes(1)));
         assertThat(rl.tiles()).isEqualTo(new RateLimitProperties.Limit(24000L, 24000L, Duration.ofMinutes(1)));
         assertThat(rl.global()).isEqualTo(new RateLimitProperties.Limit(2000L, 700L, Duration.ofSeconds(1)));
+        // (docs/DEVIATIONS.md): stricter than heavy, default single-user 10/min
+        assertThat(rl.forecast()).isEqualTo(new RateLimitProperties.Limit(1800L, 1800L, Duration.ofMinutes(1)));
+        assertThat(rl.forecast().capacity()).isLessThan(rl.heavy().capacity());
+        assertThat(config(false).rateLimit().forecast()).isEqualTo(new RateLimitProperties.Limit(10L, 10L, Duration.ofMinutes(1)));
+        assertThat(config(false).rateLimit().forecast().capacity()).isLessThan(config(false).rateLimit().heavy().capacity());
         assertThat(rl.trustedProxies()).containsExactly("10.42.0.0/24");
         assertThat(c.firms().budgetCapacity()).isEqualTo(4500L);
         assertThat(c.firms().budgetPeriod()).isEqualTo(Duration.ofMinutes(10));
@@ -209,6 +214,29 @@ class PublicLoadSimulationTest {
         Sim before = new Sim(config(false));
         events.forEach(before::run);
         assertThat(before.statuses.keySet()).anyMatch(s -> s.startsWith("429"));
+    }
+
+    @Test
+    void twoHundredUsersWithOneForecastPerPageViewGetNo429AndOneAddressIsCappedAt1800() throws IOException {
+        // profile: the same 200 reviewers behind one address, one POST /api/v1/forecast per page view (every 10 s)
+        List<Event> events = new ArrayList<>(profile(200, 60));
+        Random rnd = new Random(7);
+        for (int u = 0; u < 200; u++) {
+            for (long t = (long) (rnd.nextDouble() * 10 * SECOND); t < 60 * SECOND; t += 10 * SECOND) {
+                events.add(new Event(t + 300_000_000L, "/api/v1/forecast", null, NAT));
+            }
+        }
+        events.sort(Comparator.comparingLong(Event::at));
+        assertThat(events).hasSize(23_200 + 1_200);
+        Sim sim = new Sim(config(true));
+        events.forEach(sim::run);
+        assertThat(sim.statuses).containsOnlyKeys("200");
+        // a scraper on one address: 1,800 forecasts in a minute, then 429 scope forecast
+        Sim scraper = new Sim(config(true));
+        for (int i = 0; i < 1_801; i++) {
+            scraper.run(new Event(i * 10_000_000L, "/api/v1/forecast", null, "203.0.113.9"));
+        }
+        assertThat(scraper.statuses).containsEntry("200", 1_800).containsEntry("429 forecast", 1);
     }
 
     @Test

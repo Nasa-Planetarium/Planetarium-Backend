@@ -44,9 +44,9 @@ function row(ok, text) {
   if (!ok) failures++;
 }
 
-async function call(method, path, body) {
+async function call(method, path, body, headers = {}) {
   try {
-    const res = await fetch(new URL(path, base), { method, body, redirect: 'manual', signal: AbortSignal.timeout(30_000) });
+    const res = await fetch(new URL(path, base), { method, body, headers, redirect: 'manual', signal: AbortSignal.timeout(30_000) });
     return { status: res.status, text: method === 'HEAD' ? '' : await res.text() };
   } catch (e) {
     return { status: 0, text: String(e.cause?.code ?? e.message) };
@@ -83,5 +83,12 @@ for (const [method, path] of [['POST', '/api/v1/aois'], ['POST', '/api/v1/summar
   const r = await call(method, path, method === 'DELETE' ? undefined : '{}');
   row(r.status === 405, `${method} ${path} → ${r.status} (want 405)`);
 }
+// the one public POST reaches Spring — an invalid body (no period) is Spring's 400 40006, so the forecast
+// service is never called by the smoke; a near-miss path stays 405
+const forecast = await call('POST', '/api/v1/forecast', '{"region":"SIDO_51"}', { 'content-type': 'application/json' });
+row(forecast.status === 400 && /"error_no"\s*:\s*40006/.test(forecast.text),
+  `POST /api/v1/forecast (no period) → ${forecast.status} (want 400 error_no 40006 from the app)`);
+const nearMiss = await call('POST', '/api/v1/forecast/', '{}', { 'content-type': 'application/json' });
+row(nearMiss.status === 405, `POST /api/v1/forecast/ → ${nearMiss.status} (want 405)`);
 console.log(failures === 0 ? 'SMOKE OK' : `SMOKE FAILED: ${failures} row(s)`);
 process.exit(failures === 0 ? 0 : 1);

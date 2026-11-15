@@ -80,6 +80,20 @@ emberline:
     polygon-vertices: 5000
     cells-max: 10000
     csv-rows: 100000
+    fire-events-limit-max: 1000
+    fire-events-days: 3700
+    layer-bbox-area-deg2: 400
+    frp-rows: 50000
+    frp-day-days: 31
+    frp-month-months: 24
+    frp-bbox-area-deg2: 100
+    fwi-series-days: 366
+    status-day-days: 366
+    spread-cells-max: 20000
+    forecast-body-bytes: 131072
+    forecast-polygon-vertices: 2000
+    forecast-horizon-days-max: 30
+    forecast-span-days: 400
   ingest:
     copy-workers: 4
     duckdb-memory-limit: 1GB
@@ -96,6 +110,21 @@ emberline:
       memory-limit: 512MB
       threads: 2
     cell-set-entries: 256
+  layer-cache:
+    enabled: true
+    url: ${EMBERLINE_REDIS_CACHE_URL:redis://localhost:6379}
+    env: ${EMBERLINE_ENV:dev}
+    connect-timeout: 300ms
+    command-timeout: 2s
+    retry-after: 5s
+  forecast:
+    url: ${EMBERLINE_FORECAST_URL:http://planetarium-forecast:8000}
+    connect-timeout: 1s
+    timeout: 10s
+    max-response-bytes: 4194304
+    status-ttl: 60s
+    cache-ttl: 48h
+    day-skew: 2m
   firms:
     wms-base-url: ${FIRMS_WMS_BASE_URL:}
     map-key-file: ${FIRMS_MAP_KEY_FILE:}
@@ -129,6 +158,10 @@ emberline:
       capacity: 2000
       refill-tokens: 700
       refill-period: 1s
+    forecast:
+      capacity: 10
+      refill-tokens: 10
+      refill-period: 1m
   hotspots:
     max-area-deg2: 100
     max-days-reference: 92

@@ -64,7 +64,17 @@ class PublicDeployConfigTest {
             "/api/v1/satellite-status",
             "/api/v1/methods/current",
             "/api/v1/methods/v1-m2v-2026-11-14",
-            "/api/v1/firms/wms-tiles");
+            "/api/v1/firms/wms-tiles",
+            // v1.2 layers (contract 272aedb); 404 from the app until their packets land
+            "/api/v1/occurrence/grid",
+            "/api/v1/occurrence/aois",
+            "/api/v1/aois/SGG_31140/occurrence",
+            "/api/v1/fire-events",
+            "/api/v1/fire-events/KR_20001102_0001",
+            "/api/v1/aois/KR/fwi",
+            "/api/v1/spread-nowcast",
+            "/api/v1/aois/ADM0_ARG/fire-regime",
+            "/api/v1/cells/frp");
 
     static final List<String> BLOCKED = List.of(
             "/", "/index.html",
@@ -75,7 +85,9 @@ class PublicDeployConfigTest {
             "/admin", "/api/admin", "/api/v1/admin", "/ingest", "/api/v1/ingest", "/api/v1/load", "/api/v1/releases",
             "/api/aoi", "/api/summary", "/api/export.csv", "/api/firms/wms", "/api/cells", "/api/hotspots",
             "/api/v2/aois", "/api/v1", "/api/v1/", "/api/v1/aois/KR/months/2025-3/comparison", "/api/v1/aois/KR/other",
-            "/api/v1/firms/wms-tiles/x", "/api/v1/cells/x");
+            "/api/v1/firms/wms-tiles/x", "/api/v1/cells/x",
+            "/api/v1/occurrence", "/api/occurrence", "/api/events", "/api/fwi", "/api/v1/fire-events/KR_1",
+            "/api/v1/cells/frp/x");
 
     @Test
     void eachPublicEndpointIsProxiedForGetAndHead() {
@@ -85,7 +97,8 @@ class PublicDeployConfigTest {
         }
         // every GET path of the contract is in the list (and nothing else is proxied)
         assertThat(PUBLIC.stream().map(p -> p.replaceAll("^/api/v1/aois/[^/]+", "/api/v1/aois/{aoiId}")
-                .replaceAll("months/[0-9-]+/", "months/{yearMonth}/").replaceAll("methods/v1.*", "methods/{methodVersion}"))
+                .replaceAll("months/[0-9-]+/", "months/{yearMonth}/").replaceAll("methods/v1.*", "methods/{methodVersion}")
+                .replaceAll("fire-events/[^/]+$", "fire-events/{eventId}"))
                 .distinct().sorted().toList()).isEqualTo(contractGetPaths());
     }
 
@@ -103,6 +116,26 @@ class PublicDeployConfigTest {
             assertThat(Nginx.outcome(tunnel, method, "/api/v1/summary-queries")).as(method).isEqualTo("return 405");
             assertThat(Nginx.outcome(tunnel, method, "/actuator")).as(method).isEqualTo("return 405");
         }
+    }
+
+    // ---- item 3: the one public POST ----
+
+    @Test
+    void postIsProxiedOnlyForExactlyTheForecastPath() {
+        assertThat(Nginx.outcome(tunnel, "POST", "/api/v1/forecast")).isEqualTo("proxy http://pl-app:8080");
+        for (String path : List.of("/api/v1/forecast/", "/api/v1/forecasts", "/api/v1/forecast/x", "/api/forecast",
+                "/api/v1/summary-queries", "/api/v1/aois", "/api/v1/cells/frp", "/actuator", "/")) {
+            assertThat(Nginx.outcome(tunnel, "POST", path)).as("POST %s", path).isEqualTo("return 405");
+        }
+        for (String method : List.of("PUT", "PATCH", "DELETE", "OPTIONS", "TRACE", "GET", "HEAD")) {
+            assertThat(Nginx.outcome(tunnel, method, "/api/v1/forecast")).as("%s /api/v1/forecast", method).isEqualTo("return 405");
+        }
+        Directive forecast = tunnel.all("location").stream().filter(l -> l.args.equals(List.of("=", "/api/v1/forecast")))
+                .findFirst().orElseThrow();
+        // = emberline.limits.forecast-body-bytes (131072); every other tunnel request keeps 1k
+        assertThat(forecast.first("client_max_body_size").orElseThrow().args).containsExactly("128k");
+        assertThat(tunnel.first("client_max_body_size").orElseThrow().args).containsExactly("1k");
+        assertThat(http.deep("proxy_cache_methods").get(0).args).containsExactly("GET", "HEAD");
     }
 
     @Test
@@ -171,7 +204,7 @@ class PublicDeployConfigTest {
             }
         }
         assertThat(tunnelService).isTrue();
-        // ServiceLB is disabled on aibox (DEVIATIONS PUB-LAN): no node-port Service at all; LAN stays the port-forward to pl-web.
+        // ServiceLB is disabled on the host (DEVIATIONS PUB-LAN): no node-port Service at all; LAN stays the port-forward to pl-web.
         for (Map<String, Object> d : all) {
             if ("Service".equals(d.get("kind"))) {
                 assertThat(map(d.get("spec")).get("type")).as(name(d)).isIn(null, "ClusterIP");
@@ -316,10 +349,17 @@ class PublicDeployConfigTest {
     /** Minimal nginx config reader and request evaluator (only what the pl-web config uses). */
     static final class Nginx {
 
+        /** The last parsed http context: {@code if ($map_variable)} conditions are evaluated against its maps. */
+        static volatile Directive maps = new Directive("http", List.of(), List.of());
+
         static Directive parse(String text, Map<String, String> includes) {
             List<String> tokens = tokens(text);
             int[] pos = {0};
-            return new Directive("http", List.of(), block(tokens, pos, includes));
+            Directive http = new Directive("http", List.of(), block(tokens, pos, includes));
+            if (!http.all("map").isEmpty()) {
+                maps = http;
+            }
+            return http;
         }
 
         private static List<Directive> block(List<String> t, int[] pos, Map<String, String> includes) {
@@ -385,17 +425,18 @@ class PublicDeployConfigTest {
             return out;
         }
 
-        /** Value of a {@code map} for a source string ("~" regexes in order, then exact, then default). */
+        /** Value of a {@code map} for a source string (exact keys first, then "~" regexes in order, then default — as nginx). */
         static String map(Directive map, String source) {
             String fallback = null;
             for (Directive e : map.block()) {
                 if (e.name.equals("default")) {
                     fallback = e.args.get(0);
-                } else if (e.name.startsWith("~")) {
-                    if (pcre(e.name.substring(1)).matcher(source).find()) {
-                        return e.args.get(0);
-                    }
-                } else if (e.name.equals(source)) {
+                } else if (!e.name.startsWith("~") && e.name.equals(source)) {
+                    return e.args.get(0);
+                }
+            }
+            for (Directive e : map.block()) {
+                if (e.name.startsWith("~") && pcre(e.name.substring(1)).matcher(source).find()) {
                     return e.args.get(0);
                 }
             }
@@ -413,8 +454,20 @@ class PublicDeployConfigTest {
                 if (d.name.equals("if")) {
                     String cond = String.join(" ", d.args);
                     var m = Pattern.compile("^\\(\\$request_method !~ (.+)\\)$").matcher(cond);
-                    assertThat(m.matches()).as("only the method check is used: %s", cond).isTrue();
-                    if (!Pattern.compile(m.group(1)).matcher(method).find()) {
+                    var v = Pattern.compile("^\\((\\$[a-z0-9_]+)\\)$").matcher(cond);
+                    boolean refuse;
+                    if (m.matches()) {
+                        refuse = !Pattern.compile(m.group(1)).matcher(method).find();
+                    } else {
+                        // if ($var): true unless empty or "0"; $var is a map over $request_method and $uri
+                        assertThat(v.matches()).as("only method checks are used: %s", cond).isTrue();
+                        Directive map = maps.all("map").stream().filter(x -> x.args.get(1).equals(v.group(1))).findFirst().orElseThrow();
+                        String source = map.args.get(0).replace("$request_method", method).replace("$uri", uri);
+                        assertThat(source).as("map source of %s uses only $request_method and $uri", v.group(1)).doesNotContain("$");
+                        String value = map(map, source);
+                        refuse = value != null && !value.isEmpty() && !value.equals("0");
+                    }
+                    if (refuse) {
                         return "return " + d.first("return").orElseThrow().args.get(0);
                     }
                 }

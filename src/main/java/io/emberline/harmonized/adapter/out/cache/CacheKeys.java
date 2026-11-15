@@ -13,8 +13,8 @@ import java.util.HexFormat;
  */
 public final class CacheKeys {
 
-    /** Bump when the cached bundle changes shape. */
-    public static final int BUNDLE_SCHEMA = 1;
+    /** Bump when the cached bundle changes shape (2: v1.2 r3 baseline_period, continuity_ratio, continuity_source). */
+    public static final int BUNDLE_SCHEMA = 2;
 
     private CacheKeys() {
     }

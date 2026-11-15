@@ -39,7 +39,8 @@ import tools.jackson.databind.json.JsonMapper;
  * provenance partitions: {@code method_meta} (m2v_meta.json text as-is + this ingest's aliases/warnings/files),
  * {@code month_status} (WORLD rows of aoi_month.parquet: value_source, data_source, status per month, copied) and
  * {@code satellite_day} (satellite_day_status.parquet when the release ships it; v1.2 names the day {@code date_utc} and
- * adds {@code note}) and {@code satellite_month} (satellite_month_status.parquet, v1.2, when the release ships it).
+ * adds {@code note}, and the columns /satellite-status serves: {@code n_det_global}, {@code coverage},
+ * {@code ratio_to_seasonal}) and {@code satellite_month} (satellite_month_status.parquet, v1.2, when the release ships it).
  */
 @Component
 class ProvenanceReleaseLoader implements ReleaseLoader {
@@ -70,7 +71,10 @@ class ProvenanceReleaseLoader implements ReleaseLoader {
             ColumnSpec.required("status", ColumnKind.TEXT),
             ColumnSpec.optional("data_source", ColumnKind.TEXT),
             ColumnSpec.optional("updated_at", ColumnKind.TIMESTAMP),
-            ColumnSpec.optional("note", ColumnKind.TEXT));
+            ColumnSpec.optional("note", ColumnKind.TEXT),
+            ColumnSpec.optional("n_det_global", ColumnKind.INTEGER),
+            ColumnSpec.optional("coverage", ColumnKind.TEXT),
+            ColumnSpec.optional("ratio_to_seasonal", ColumnKind.NUMBER));
     /** Day statuses: the hand-off month codes plus v1.2 {@code low} (ok, low, missing, partial in the real file). */
     static final Set<String> SDS_STATUSES = Stream.concat(CodeValues.STATUSES.stream(), Stream.of("low")).collect(Collectors.toUnmodifiableSet());
     static final List<ColumnSpec> SMS_COLUMNS = List.of(
@@ -137,7 +141,7 @@ class ProvenanceReleaseLoader implements ReleaseLoader {
             }
         }
         if (!source.has(SDS)) {
-            report.warn("FILE_ABSENT", SDS, "satellite-status answers month level only");
+            report.warn("FILE_ABSENT", SDS, "satellite-status freq=day answers 503 layer not loaded");
             return;
         }
         try (Connection duck = duckDb.open()) {
@@ -202,7 +206,8 @@ class ProvenanceReleaseLoader implements ReleaseLoader {
                                 new CopyInputStream(rs, (r, l) -> l.text(r.getString(1)).text(String.valueOf(r.getObject(2)))
                                         .text(r.getString(3)).text(r.getString(4))
                                         .text(r.getObject(5, OffsetDateTime.class) == null ? null : r.getObject(5, OffsetDateTime.class).toString())
-                                        .text(r.getString(6))));
+                                        .text(r.getString(6)).integer(r.getLong(7), r.wasNull()).text(r.getString(8))
+                                        .num(r.getDouble(9), r.wasNull())));
                     }
                 }
             }

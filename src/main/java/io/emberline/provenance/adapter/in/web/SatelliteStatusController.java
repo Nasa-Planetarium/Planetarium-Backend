@@ -4,6 +4,7 @@ import io.emberline.provenance.adapter.in.web.dto.SatelliteStatusRequest;
 import io.emberline.provenance.application.port.in.GetSatelliteStatusUseCase;
 import io.emberline.provenance.application.port.in.SatelliteStatusResponse;
 import io.emberline.shared.release.ReleaseRef;
+import io.emberline.shared.web.http.LayerCached;
 import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +21,8 @@ class SatelliteStatusController {
         this.useCase = useCase;
     }
 
+    /** v1.2 release file (contract header set layer_cached); the hand-off alias /api/status forwards here. */
+    @LayerCached
     @GetMapping("/satellite-status")
     SatelliteStatusResponse status(ReleaseRef release, @Valid @ParameterObject SatelliteStatusRequest request) {
         return useCase.status(release, request.toQuery());

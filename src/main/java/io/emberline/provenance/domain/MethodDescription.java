@@ -1,12 +1,14 @@
 package io.emberline.provenance.domain;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Fixed explanations served with /methods (prototype v3 method body): value-source periods (release month bounds),
- * status codes, the verdict rule the model team applied (explained, never re-applied), data rules and source credits.
+ * status codes, the verdict rule the model team applied (explained, never re-applied), data rules, source credits and
+ * the contract's display names.
  */
 public final class MethodDescription {
 
@@ -27,12 +29,29 @@ public final class MethodDescription {
             Map.of("id", "aoi_totals", "text", "area totals are aoi_month values; summing /cells inside an area gives a different number"),
             Map.of("id", "label", "text", "unit is satellite fire detections on the VIIRS S-NPP basis, not fire counts; 2000-2012-01 are estimates — show value_lo..value_hi"),
             Map.of("id", "model_names", "text", "FireBridge = m2v_xgb, FireBridge-Terra = m2v_xgb_terra, FireBridge Uncertainty Band = m2v_q10_q90, N20 Bridge = n20_bridge; FireBridge 총량 오차 1~2%, 월별 상관 0.97"));
+    /**
+     * Contract {@code Method.display_names} = {@code info.x-display-names} (internal id → screen name; values stay the
+     * internal ids). The release carries no such names (m2v_meta.json {@code model_names} has the older "M2V
+     * Harmonizer" texts), so they are the contract's (docs/DEVIATIONS.md).
+     */
+    public static final Map<String, String> DISPLAY_NAMES = displayNames();
+    /** Contract {@code Method.performance_copy} = {@code info.x-display-names.performance_copy}. */
+    public static final String PERFORMANCE_COPY = "총량 오차 1~2%, 월별 상관 0.97";
     public static final List<Map<String, Object>> SOURCES = List.of(
             Map.of("name", "NASA FIRMS", "url", "https://firms.modaps.eosdis.nasa.gov/",
                     "credit", "We acknowledge the use of data and imagery from LANCE FIRMS operated by NASA's Earth Science Data and Information System (ESDIS)."),
             Map.of("name", "Boundaries", "license", "CC BY", "note", "see the team's docs/references.md"));
 
     private MethodDescription() {
+    }
+
+    private static Map<String, String> displayNames() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("m2v_xgb", "FireBridge (MODIS-to-VIIRS Harmonizer)");
+        m.put("m2v_xgb_terra", "FireBridge-Terra");
+        m.put("m2v_q10_q90", "FireBridge Uncertainty Band");
+        m.put("n20_bridge", "N20 Bridge");
+        return Collections.unmodifiableMap(m);
     }
 
     private static Map<String, Object> period(String source, String from, String to, String labelKo, Double factor) {

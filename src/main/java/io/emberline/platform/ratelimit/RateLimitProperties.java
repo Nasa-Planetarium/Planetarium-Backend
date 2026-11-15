@@ -21,14 +21,18 @@ import org.springframework.boot.context.properties.bind.ConstructorBinding;
  * @param hmacSecret     key of the subject HMAC in bucket keys (same on every pod)
  * @param global         scope global: every public request of all callers together, pod-local bucket (default burst
  *                       2000, 700 per second) — bounds the origin load whatever the number of addresses
+ * @param forecast       scope forecast: routes in {@code forecastCosts} (default 10 per minute, stricter than heavy —
+ *                       each request is a POST the CDN never caches and a call into the model's forecast service)
+ * @param forecastCosts  path → token cost of the forecast scope (canonical and alias paths)
  *
  * <p>The defaults are single-user values. The public deployment (about 200 reviewers behind one NAT address) sets
- * {@code ip}, {@code heavy} and {@code tiles} in deploy/k8s/planetarium-app.yaml (docs/DEVIATIONS.md PUB-RL).
+ * {@code ip}, {@code heavy}, {@code tiles} and {@code forecast} in deploy/k8s/planetarium-app.yaml (docs/DEVIATIONS.md
+ * PUB-RL).
  */
 @ConfigurationProperties("emberline.ratelimit")
 public record RateLimitProperties(Boolean enabled, Limit ip, Limit heavy, Map<String, Integer> heavyCosts, Limit tiles,
                                   Map<String, Integer> tileCosts, List<String> trustedProxies, String hmacSecret,
-                                  Limit global) {
+                                  Limit global, Limit forecast, Map<String, Integer> forecastCosts) {
 
     @ConstructorBinding
     public RateLimitProperties {
@@ -44,11 +48,20 @@ public record RateLimitProperties(Boolean enabled, Limit ip, Limit heavy, Map<St
         trustedProxies = trustedProxies == null ? List.of() : trustedProxies.stream().map(String::strip).filter(s -> !s.isEmpty()).toList();
         hmacSecret = hmacSecret == null || hmacSecret.isBlank() ? "emberline-rate-limit" : hmacSecret;
         global = global == null ? new Limit(2000L, 700L, Duration.ofSeconds(1)) : global.orDefaults(2000, 700, Duration.ofSeconds(1));
+        forecast = forecast == null ? new Limit(10L, 10L, Duration.ofMinutes(1)) : forecast.orDefaults(10, 10, Duration.ofMinutes(1));
+        forecastCosts = forecastCosts == null || forecastCosts.isEmpty() ? Map.of(
+                "/api/v1/forecast", 1, "/api/forecast", 1) : Map.copyOf(forecastCosts);
     }
 
     public RateLimitProperties(Boolean enabled, Limit ip, Limit heavy, Map<String, Integer> heavyCosts, Limit tiles,
                                Map<String, Integer> tileCosts, List<String> trustedProxies, String hmacSecret) {
         this(enabled, ip, heavy, heavyCosts, tiles, tileCosts, trustedProxies, hmacSecret, null);
+    }
+
+    public RateLimitProperties(Boolean enabled, Limit ip, Limit heavy, Map<String, Integer> heavyCosts, Limit tiles,
+                               Map<String, Integer> tileCosts, List<String> trustedProxies, String hmacSecret,
+                               Limit global) {
+        this(enabled, ip, heavy, heavyCosts, tiles, tileCosts, trustedProxies, hmacSecret, global, null, null);
     }
 
     public record Limit(Long capacity, Long refillTokens, Duration refillPeriod) {

@@ -26,7 +26,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * harmonized partitions: {@code harmonized.aoi_month} and {@code harmonized.aoi_month_compare}, values copied
- * as-is (A1), including the v1.1 columns value_projected and as_of_date (optional, NULL for a v1 release). Missing
+ * as-is (A1), including the v1.1 columns value_projected and as_of_date (optional, NULL for a v1 release) and the v1.2 r3
+ * compare columns baseline_period, continuity_ratio, continuity_source (optional, NULL before r3). Missing
  * months keep value NULL (E2); out-of-interval values are kept (E3); v0 value_source names are translated to v1 and
  * reported. {@code harmonized.cell_center} = one centre per cell of harmonized_cell_month.parquet (AOI cell sets).
  * harmonized_cell_day.parquet and harmonized_residual_cell_month.parquet are NOT loaded (ruling R-CD1): when present
@@ -83,7 +84,10 @@ class HarmonizedReleaseLoader implements ReleaseLoader {
             ColumnSpec.optional("status", ColumnKind.TEXT),
             ColumnSpec.optional("low_sample", ColumnKind.BOOLEAN),
             ColumnSpec.optional("value_projected", ColumnKind.NUMBER),
-            ColumnSpec.optional("as_of_date", ColumnKind.DATE));
+            ColumnSpec.optional("as_of_date", ColumnKind.DATE),
+            ColumnSpec.optional("baseline_period", ColumnKind.TEXT),
+            ColumnSpec.optional("continuity_ratio", ColumnKind.NUMBER),
+            ColumnSpec.optional("continuity_source", ColumnKind.TEXT));
     static final List<ColumnSpec> CENTER_COLUMNS = List.of(
             ColumnSpec.required("cell_id", ColumnKind.INTEGER),
             ColumnSpec.required("cell_lat", ColumnKind.NUMBER, "lat"),
@@ -207,7 +211,8 @@ class HarmonizedReleaseLoader implements ReleaseLoader {
                             .num(r.getDouble(4), r.wasNull()).num(r.getDouble(5), r.wasNull()).num(r.getDouble(6), r.wasNull())
                             .num(r.getDouble(7), r.wasNull()).num(r.getDouble(8), r.wasNull()).num(r.getDouble(9), r.wasNull())
                             .integer(r.getInt(10), r.wasNull()).text(r.getString(11)).text(r.getString(12))
-                            .bool(r.getBoolean(13), r.wasNull()).num(r.getDouble(14), r.wasNull()).text(r.getString(15)),
+                            .bool(r.getBoolean(13), r.wasNull()).num(r.getDouble(14), r.wasNull()).text(r.getString(15))
+                            .text(r.getString(16)).num(r.getDouble(17), r.wasNull()).text(r.getString(18)),
                     "harmonized/index_aoi_month.sql"));
             ParquetColumns k = ParquetColumns.inspect(duck, source.file(CELL_MONTH).toString(), CELL_MONTH, CENTER_COLUMNS, scratch);
             rows.put(T_CENTER, copy(duck, k, source.file(CELL_MONTH).toString(), T_CENTER, id,

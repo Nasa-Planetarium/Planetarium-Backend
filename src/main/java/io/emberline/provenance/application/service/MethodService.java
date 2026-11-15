@@ -30,7 +30,8 @@ class MethodService implements GetMethodUseCase {
                 .orElseThrow(() -> new DataUnavailableException(ErrorCode.DATA_NOT_LOADED, "the method description is not loaded"));
         return new MethodResponse(release.methodVersion(), Units.UNIT, Units.UNIT_CODE, new RawJson(meta.metaJson()),
                 MethodDescription.VALUE_SOURCES, MethodDescription.STATUSES, MethodDescription.VERDICT_RULE,
-                MethodDescription.RULES, MethodDescription.SOURCES, release.dataVersion(), new RawJson(meta.filesJson()),
+                MethodDescription.RULES, MethodDescription.SOURCES, release.dataVersion(), MethodDescription.DISPLAY_NAMES,
+                MethodDescription.PERFORMANCE_COPY, new RawJson(meta.filesJson()),
                 new MethodResponse.Ingest(release.loadedAt() == null ? null : release.loadedAt().toString(),
                         new RawJson(meta.aliasesUsedJson()), new RawJson(meta.warningsJson())));
     }

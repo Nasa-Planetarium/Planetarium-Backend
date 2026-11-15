@@ -8,6 +8,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -17,8 +19,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * Public-chain abuse defence, before the security chain: scope {@code ip} on every /api request, then scope
- * {@code global} (all callers together, pod-local), then scope {@code heavy} on the routes of {@code heavy-costs} or
- * scope {@code tiles} on the FIRMS WMS tile routes of {@code tile-costs}. Per-caller buckets live on redis-durable
+ * {@code global} (all callers together, pod-local), then scope {@code heavy} on the routes of {@code heavy-costs},
+ * scope {@code tiles} on the FIRMS WMS tile routes of {@code tile-costs} or scope {@code forecast} on the forecast
+ * routes of {@code forecast-costs}. Per-caller buckets live on redis-durable
  * under {@code em:{env}:rl:{scope}:{hmac(subject)}} (the client address never appears in a key). Over the limit → 429
  * rate_limited (10301) with an integer Retry-After and the exhausted scope named in {@code detail}.
  */
@@ -77,16 +80,25 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (!r.granted()) {
             return new Denial("global", r.retryAfterSeconds());
         }
-        Integer heavyCost = properties.heavyCosts().get(path);
-        Integer tileCost = properties.tileCosts().get(path);
-        String scope = heavyCost != null ? "heavy" : tileCost != null ? "tiles" : null;
-        if (scope != null) {
-            r = take(scope, subject, heavyCost != null ? heavyCost : tileCost, heavyCost != null ? properties.heavy() : properties.tiles());
-            if (!r.granted()) {
-                return new Denial(scope, r.retryAfterSeconds());
+        for (RouteScope s : routeScopes()) {
+            Integer cost = s.costs().get(path);
+            if (cost != null) {
+                r = take(s.name(), subject, cost, s.limit());
+                return r.granted() ? null : new Denial(s.name(), r.retryAfterSeconds());
             }
         }
         return null;
+    }
+
+    /** A per-route scope: its name, the paths it covers with their token cost, and its bucket. */
+    private record RouteScope(String name, Map<String, Integer> costs, RateLimitProperties.Limit limit) {
+    }
+
+    /** First matching scope wins; a path is listed in at most one of them by configuration. */
+    private List<RouteScope> routeScopes() {
+        return List.of(new RouteScope("heavy", properties.heavyCosts(), properties.heavy()),
+                new RouteScope("tiles", properties.tileCosts(), properties.tiles()),
+                new RouteScope("forecast", properties.forecastCosts(), properties.forecast()));
     }
 
     private TokenBuckets.Result take(String scope, String subject, long cost, RateLimitProperties.Limit limit) {

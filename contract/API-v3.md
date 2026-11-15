@@ -1,6 +1,6 @@
 # API v3 — EMBERLINE 핸드오프 경로 (접두사 없음)
 
-작성 2026-11-14 · 기준 문서: 팀 `docs/backend-handoff.md` 초안(데이터 버전 `v1-m2v-2026-11-14`) · 서버 aibox `~/planetarium/api` (v3.0.0)
+작성 2026-11-14 · 기준 문서: 팀 `docs/backend-handoff.md` 초안(데이터 버전 `v1-m2v-2026-11-14`) · 서버 `~/planetarium/api` (v3.0.0)
 
 > **원칙** — 우리 서버를 갈아엎지 않고 **요청 파라미터·경로 이름·코드값·응답 필드 이름·규칙을 핸드오프에 맞춘다.**
 > 핸드오프에 없는 우리 것은 지우지 않고 **「확장」** 으로 표시한다(§4). 핸드오프가 말하지 않아 우리가 정한 것은 **「가정」** 이다(§9).
@@ -201,7 +201,7 @@ GET /compare?aoi_id=group:gb-north&year=2025&month=3
               {"year": 2008, "value": null, "status": "missing", "value_source": "modis_m2v", "used": false}, …],
  "rule": {"id": "pct-80-20/n10/ok-only", …}, "method_version": "v1-m2v-fake-2026-11-14"}
 ```
-- `value`~`verdict` 8개 = `aoi_month_compare` 행 그대로. `status`·`value_source`·`value_lo/hi`·`baseline[]`·`rule` 은 확장(`baseline[]` 은 2001–2025 중 해당 연도 뺀 24개, `used` = 기준 분포에 들어갔는지).
+- `value`~`verdict` 8개 = `aoi_month_compare` 행 그대로. `status`·`value_source`·`value_lo/hi`·`baseline[]`·`rule` 은 확장(`baseline[]` 은 그 행의 `baseline_period`(열이 없는 release 는 2001–2025) 중 해당 연도 뺀 해, `used` = 기준 분포에 들어갔는지). data-v1.2 r3: `baseline_period`·`continuity_ratio`·`continuity_source` 도 행 그대로(MAPPING §8.5).
 - 행이 없는 달 → `status: "out_of_range"`, 나머지 null.
 
 ### 3.6 `GET /status`
@@ -272,7 +272,7 @@ GET /status?start=2026-11-04&end=2026-11-07
 | `harmonized_hotspots/year=YYYY/month=MM/*.parquet` | **latitude, longitude, acq_datetime_utc, date_local, satellite, instrument, frp, confidence, daynight, cell_id, country, adm1, harmonized_weight, weight_lo, weight_hi, weight_source, is_reference, source, method_version** | 폴더 = date_local 의 연·월 |
 | `harmonized_cell_month.parquet` | **cell_id, cell_lat, cell_lon, year, month, value, value_lo, value_hi, raw_modis, raw_viirs, value_source, data_source, status, method_version** + active_days, frp_sum, missing_days, 덩어리 8열 | (cell_id, year, month), 0 아닌 행만(덩어리만 있는 칸은 0 행) |
 | `aoi_month.parquet` | **aoi_id, year, month, value, value_lo, value_hi, raw_modis, raw_viirs, value_source, data_source, status, n_cells** + active_days, active_days_modis_raw, active_days_viirs_raw, missing_dates, days_covered, method_version, 덩어리 8열 | (aoi_id, year, month) |
-| `aoi_month_compare.parquet` | **aoi_id, year, month, value, baseline_median, baseline_p25, baseline_p75, percentile, ratio_to_median, n_baseline_years, verdict** + status, low_sample (팀 `analysis.py` 가 쓰는 선택 열) | (aoi_id, year, month) |
+| `aoi_month_compare.parquet` | **aoi_id, year, month, value, baseline_median, baseline_p25, baseline_p75, percentile, ratio_to_median, n_baseline_years, verdict** + status, low_sample (팀 `analysis.py` 가 쓰는 선택 열) + baseline_period, continuity_ratio, continuity_source (data-v1.2 r3 선택 열) | (aoi_id, year, month) |
 | `aoi_list.parquet` | **aoi_id, name_ko, name_en, level, parent_id, n_cells, hidden** (`name_en` 이 없으면 경고 후 null — 팀 현재 코드는 `name` 하나) | aoi_id |
 | `aoi_boundaries.geojson` | FeatureCollection, `properties` = aoi_list 열 7개(가짜 생성기) — 서버가 쓰는 것은 `aoi_id` 와 (Multi)Polygon 뿐 | aoi_id |
 | `satellite_day_status.parquet` | (가정) **satellite, date, status** + data_source, updated_at | (satellite, date) |
@@ -401,7 +401,7 @@ GET /status?start=2026-11-04&end=2026-11-07
 ## 10. 잰 것 · 추론 · 안 잰 것 (2026-11-14)
 
 - **잰 것(검토 후)**: 검토 수리 커밋에서 `pytest` 183 passed(rc 0) — §11.3 참고. 아래 줄은 첫 구현 때 잰 것.
-- **잰 것**: aibox `~/planetarium/api` 커밋 `cdf396c` 에서 `pytest` 179 passed(rc 0), 가짜 생성기 → 검사기 rc 0(경고 0), `systemd-run --unit=pl-api` 로 띄워 핸드오프 8경로 + `/cells`·`/firms/wms`·`/v2`·`/v1` curl 각 1회 → 200(오류 2건 의도대로 400·404), 모든 응답에 `X-Method-Version`, `/v2`·`/v1` 만 `Deprecation: true`; FIRMS 키(32자)가 응답 3개·서비스 로그에 0회. 예시 JSON 은 가짜 파일로 서버가 실제로 낸 응답을 줄인 것.
+- **잰 것**: 서버 `~/planetarium/api` 커밋 `cdf396c` 에서 `pytest` 179 passed(rc 0), 가짜 생성기 → 검사기 rc 0(경고 0), `systemd-run --unit=pl-api` 로 띄워 핸드오프 8경로 + `/cells`·`/firms/wms`·`/v2`·`/v1` curl 각 1회 → 200(오류 2건 의도대로 400·404), 모든 응답에 `X-Method-Version`, `/v2`·`/v1` 만 `Deprecation: true`; FIRMS 키(32자)가 응답 3개·서비스 로그에 0회. 예시 JSON 은 가짜 파일로 서버가 실제로 낸 응답을 줄인 것.
 - **추론**: G5(팀이 칸×AOI 무게를 씀)는 팀 코드 `harmonize.py` 의 열 이름을 읽은 추론이다. 핸드오프 v1 실제 파일은 안 받았다.
 - **안 잰 것**: 팀 v0/v1 실제 파일 적재(받은 파일 없음), 전 세계 규모(점 파일 수천만 행)에서 `/hotspots`·`/summary` 응답 시간, 프런트가 v3 로 옮긴 뒤의 화면.
 

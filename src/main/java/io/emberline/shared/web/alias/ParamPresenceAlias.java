@@ -2,6 +2,7 @@ package io.emberline.shared.web.alias;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * One alias path serving several canonical operations chosen by which parameter is present, e.g. {@code /api/summary}:
@@ -16,8 +17,15 @@ public record ParamPresenceAlias(String aliasPath, List<Choice> choices) impleme
 
     @Override
     public Canonical rewrite(Map<String, String[]> params, String rawQuery) {
-        HandoffAliasRule rule = choices.stream().filter(c -> params.containsKey(c.param())).findFirst()
-                .orElse(choices.getFirst()).rule();
-        return rule.rewrite(params, rawQuery);
+        return chosen(params).rewrite(params, rawQuery);
+    }
+
+    @Override
+    public Optional<Rejection> rejection(Map<String, String[]> params) {
+        return chosen(params).rejection(params);
+    }
+
+    private HandoffAliasRule chosen(Map<String, String[]> params) {
+        return choices.stream().filter(c -> params.containsKey(c.param())).findFirst().orElse(choices.getFirst()).rule();
     }
 }

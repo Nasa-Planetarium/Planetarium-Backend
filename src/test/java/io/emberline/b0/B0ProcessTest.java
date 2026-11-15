@@ -47,7 +47,7 @@ class B0ProcessTest {
         assertThat(runMain(args)).isZero();
         DataSource ds = EmbeddedPg.dataSource(url);
         Map<String, Integer> first = historyRows(ds);
-        assertThat(first.keySet()).isEqualTo(new TreeSet<>(Set.of("catalog", "harmonized", "observation", "provenance", "ingest", "platform")));
+        assertThat(first.keySet()).isEqualTo(new TreeSet<>(Set.of("catalog", "harmonized", "observation", "provenance", "outlook", "ingest", "platform", "fireinfo")));
         assertThat(runMain(args)).isZero();
         assertThat(historyRows(ds)).isEqualTo(first);
     }

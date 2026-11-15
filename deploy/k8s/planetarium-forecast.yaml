@@ -1,0 +1,192 @@
+# FireOutlook Planner service: the model team's planetarium.forecast behind POST /forecast, reached only by
+# pl-app (Spring POST /api/v1/forecast) on Service planetarium-forecast:8000. Owner-applied after deploy/render.sh fills
+# __HOST_HOME__; the image planetarium-forecast:c43368c is built by deploy/forecast/build.sh and imported into k3s.
+# Layout, refresh inventory and owner steps: deploy/forecast/README.md. Secret pl-firms (FIRMS_MAP_KEY) is created out of
+# band and never printed; only the suspended refresh CronJob references it.
+#
+# State dir (hostPath, created by the owner, owned by uid 10001): <as_of>/ = one published planner file set (immutable),
+# current -> <as_of>. The initContainer seeds it from the release once; the service reads it read-only and re-executes
+# itself when `current` moves; only the refresh CronJob writes it.
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: planetarium-forecast-state}
+spec:
+  capacity: {storage: 2Gi}
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: planetarium-static
+  hostPath: {path: __HOST_HOME__/planetarium/forecast-state, type: Directory}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: forecast-state, namespace: planetarium}
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: planetarium-static
+  volumeName: planetarium-forecast-state
+  resources: {requests: {storage: 2Gi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: pl-forecast, namespace: planetarium}
+spec:
+  replicas: 1
+  strategy: {type: RollingUpdate, rollingUpdate: {maxSurge: 1, maxUnavailable: 0}}
+  selector: {matchLabels: {app: pl-forecast}}
+  template:
+    metadata: {labels: {app: pl-forecast}}
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
+      initContainers:
+        # Initial state = the release's planner_* files (sha256-checked against release_manifest.csv). No-op once seeded.
+        - name: seed-state
+          image: planetarium-forecast:c43368c
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/opt/forecast/layout.py", "seed"]
+          env:
+            - {name: FORECAST_RELEASE_DIR, value: /release/v1.2-2026-11-15}
+            - {name: FORECAST_STATE_DIR, value: /state}
+          resources: {requests: {cpu: 100m, memory: 256Mi}, limits: {cpu: "1", memory: 512Mi}}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          volumeMounts:
+            - {name: release, mountPath: /release, readOnly: true}
+            - {name: state, mountPath: /state}
+            - {name: tmp, mountPath: /tmp}
+      containers:
+        - name: forecast
+          image: planetarium-forecast:c43368c
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: FORECAST_RELEASE_DIR, value: /release/v1.2-2026-11-15}
+            - {name: FORECAST_STATE_DIR, value: /state}
+            - {name: FORECAST_POLL_SECONDS, value: "30"}
+          ports: [{name: http, containerPort: 8000}]
+          # /healthz is 200 only when warm (forecast.warmup() done); kubelet probes read the status code.
+          readinessProbe: {httpGet: {path: /healthz, port: 8000}, periodSeconds: 5, timeoutSeconds: 2, failureThreshold: 3}
+          livenessProbe: {httpGet: {path: /healthz, port: 8000}, initialDelaySeconds: 60, periodSeconds: 30, timeoutSeconds: 5, failureThreshold: 5}
+          # Measured offline (deploy/forecast/README.md): 0.52 GiB after warmup, 0.80 GiB peak over 13-month WORLD /
+          # global bbox / global polygon queries; one forecast() at a time, so one core is used per request.
+          resources: {requests: {cpu: 250m, memory: 1Gi}, limits: {cpu: "2", memory: 1536Mi}}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          volumeMounts:
+            - {name: release, mountPath: /release, readOnly: true}
+            - {name: state, mountPath: /state, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - {name: release, persistentVolumeClaim: {claimName: release, readOnly: true}}
+        - {name: state, persistentVolumeClaim: {claimName: forecast-state}}
+        - {name: tmp, emptyDir: {sizeLimit: 64Mi}}
+---
+# ClusterIP only: no NodePort / LoadBalancer.
+apiVersion: v1
+kind: Service
+metadata: {name: planetarium-forecast, namespace: planetarium}
+spec:
+  type: ClusterIP
+  selector: {app: pl-forecast}
+  ports: [{name: http, port: 8000, targetPort: 8000}]
+---
+# Only pl-app pods reach 8000; the service itself needs no egress. K3s host-network processes (kubelet probes) bypass
+# NetworkPolicy (docs/DEVIATIONS.md PUB-IP).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: pl-forecast-ingress, namespace: planetarium}
+spec:
+  podSelector: {matchLabels: {app: pl-forecast}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{podSelector: {matchLabels: {app: pl-app}}}]
+      ports: [{protocol: TCP, port: 8000}]
+  egress: []
+---
+# Model working tree of the refresh: the model team's data/ (processed, interim, raw, external) that
+# fetch_nrt --append updates in place. It does not exist yet (deploy/forecast/README.md "Refresh inventory").
+apiVersion: v1
+kind: PersistentVolume
+metadata: {name: planetarium-forecast-work}
+spec:
+  capacity: {storage: 200Gi}
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: planetarium-static
+  hostPath: {path: __HOST_HOME__/planetarium/forecast-work, type: Directory}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: forecast-work, namespace: planetarium}
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: planetarium-static
+  volumeName: planetarium-forecast-work
+  resources: {requests: {storage: 200Gi}}
+---
+# Daily refresh after the previous day's observations are in (KST 12:00): fetch_nrt --fetch --days 2 --append
+# --with-planner in the working tree, checks, publish <state>/<as_of>, then switch `current`. On failure `current` stays.
+# SUSPENDED: the working tree lacks inputs the chain needs (README "Refresh inventory"); until the model team provides
+# them the service keeps serving the release as_of (2026-11-14). Unsuspend only after `refresh.py --preflight-only` passes.
+apiVersion: batch/v1
+kind: CronJob
+metadata: {name: pl-forecast-refresh, namespace: planetarium}
+spec:
+  suspend: true
+  schedule: "30 12 * * *"
+  timeZone: Asia/Seoul
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 7200
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 7200
+      template:
+        metadata: {labels: {app: pl-forecast-refresh}}
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          enableServiceLinks: false
+          securityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
+          containers:
+            - name: refresh
+              image: planetarium-forecast:c43368c
+              imagePullPolicy: IfNotPresent
+              command: ["python", "/opt/forecast/refresh.py"]
+              env:
+                - {name: FORECAST_RELEASE_DIR, value: /release/v1.2-2026-11-15}
+                - {name: FORECAST_STATE_DIR, value: /state}
+                - {name: FORECAST_WORK_DIR, value: /work}
+                - {name: FIRMS_MAP_KEY, valueFrom: {secretKeyRef: {name: pl-firms, key: FIRMS_MAP_KEY}}}
+              # The model team quotes ~18 GB peak for --append and ~17 GB for the planner refresh (backend-quickstart
+              # §6-2; measured on their machine with a GPU). Not measured here: the inputs are missing.
+              resources: {requests: {cpu: "2", memory: 8Gi}, limits: {cpu: "8", memory: 20Gi}}
+              securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+              volumeMounts:
+                - {name: release, mountPath: /release, readOnly: true}
+                - {name: state, mountPath: /state}
+                - {name: work, mountPath: /work}
+                - {name: tmp, mountPath: /tmp}
+          volumes:
+            - {name: release, persistentVolumeClaim: {claimName: release, readOnly: true}}
+            - {name: state, persistentVolumeClaim: {claimName: forecast-state}}
+            - {name: work, persistentVolumeClaim: {claimName: forecast-work}}
+            - {name: tmp, emptyDir: {sizeLimit: 16Gi}}
+---
+# The refresh reaches the FIRMS area API (firms.modaps.eosdis.nasa.gov, HTTPS) and DNS, nothing in the cluster or the
+# private ranges, and accepts no connections.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: pl-forecast-refresh-egress, namespace: planetarium}
+spec:
+  podSelector: {matchLabels: {app: pl-forecast-refresh}}
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    - to: [{namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}, podSelector: {matchLabels: {k8s-app: kube-dns}}}]
+      ports: [{protocol: UDP, port: 53}, {protocol: TCP, port: 53}]
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, 169.254.0.0/16, 127.0.0.0/8]
+      ports: [{protocol: TCP, port: 443}]

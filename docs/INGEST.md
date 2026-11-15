@@ -58,12 +58,14 @@ COPYs, builds the indexes, adds `CHECK (release_id = id)`, ANALYZEs and ATTACHes
 | catalog | `aoi` (aoi_list + level_file, level_rank, has_data, first/last month, bbox from JTS) | 5,051 | unique (aoi_id), (parent_id) |
 | catalog | `aoi_boundary` (geometry jsonb as in the GeoJSON, geometry_type) | 5,038 | unique (aoi_id) |
 | harmonized | `aoi_month` | 1,580,963 | unique (aoi_id, year, month) |
-| harmonized | `aoi_month_compare` (+ status, low_sample) | 1,580,963 | unique (aoi_id, year, month) |
+| harmonized | `aoi_month_compare` (+ status, low_sample; data-v1.2 r3 + baseline_period, continuity_ratio, continuity_source, optional) | 1,580,963 | unique (aoi_id, year, month) |
 | observation | `cell_month` (code columns as enums, no per-row method_version) | 51,562,642 | unique (year, month, cell_id), (year, month, cell_lat, cell_lon) |
 | provenance | `method_meta` (m2v_meta.json as `json` text, aliases_used, warnings, files) | 1 | unique (method_version) |
 | provenance | `month_status` (WORLD rows of aoi_month: value_source, data_source, status) | 313 | unique (year, month) |
 | provenance | `satellite_day` (only when satellite_day_status.parquet ships; v1.2 `date_utc` → `date` by alias, `note` kept, status ok/low/missing/partial/nrt/low_sample) | 0 (v1.2: 28,316) | unique (satellite, date) |
 | provenance | `satellite_month` (migration provenance V2; only when satellite_month_status.parquet ships, v1.2; month_status complete/partial) | 0 (v1.2: 934) | unique (satellite, year, month) |
+| outlook | `grid_occurrence` (migration outlook V1; only when grid_occurrence_nextmonth_latest.parquet ships, v1.2; the MAPPING §8.2 served columns, probabilities as double precision = the file's float32 widened exactly, `p_model` not loaded) | 0 (v1.2: 52,855) | unique (cell_id) |
+| outlook | `aoi_occurrence` (only when aoi_occurrence_nextmonth_latest.parquet ships, v1.2; `n_years` float → integer, `p_model`, `rate_all`, `lag1_value`, `occ_share`, `seasonal_cv` not loaded) | 0 (v1.2: 252) | unique (aoi_id) |
 | ingest | `release` (state, version, manifest_sha256, data_version, reason_codes/aliases/warnings jsonb), `load_task`, `active_release` (id = 1) | — | unique release_key; partial unique `WHERE state='LOADING'` and `WHERE state='ACTIVE'` |
 | platform | `event_publication`, `event_publication_archive` (Spring Modulith 2.0 JDBC, schema v2) | — | Modulith defaults |
 
@@ -83,4 +85,52 @@ Same folder layout as v1.1 plus:
 - `harmonized_cell_month` / `harmonized_cell_day` extra columns `static_removed`, `static_removed_lo`, `static_removed_hi`,
   `static_n_points` are ignored (not loaded, not served). Cell values below 0 are kept (see `NEGATIVE_VALUE` above).
 
+- `grid_occurrence_nextmonth_latest.parquet`, `aoi_occurrence_nextmonth_latest.parquet` (F15 outlook, optional, listed in
+  `SHA256SUMS` when present) → `outlook.grid_occurrence` / `outlook.aoi_occurrence`, `rows` keys
+  `outlook.grid_occurrence` / `outlook.aoi_occurrence`. Rejected: a missing served column (`COLUMN_MISSING`), a null in a
+  served non-null column (`NULL_VALUE`), NaN or infinity (`NOT_FINITE`), more than one `target_month` / `as_of_date`
+  (both files) or `model` (grid) (`HEAD_NOT_UNIQUE`), a non-integral `n_years` (`NOT_INTEGRAL:…:n_years <n> rows`), a
+  duplicate `cell_id` / `aoi_id`. A `cell_id` that breaks `floor((lat+90)/0.5)×720 + floor((lon+180)/0.5)` is kept with a
+  `CELL_ID_FORMULA` warning. Without the files: no partition, no `rows` key, no warning; the outlook routes answer 503
+  `data_not_loaded` 50502.
+
 A v1.1 folder (none of these files, no negative values) stages with the same rows and warnings as before.
+
+### `release_manifest.csv` (v1.2)
+
+Checked once per stage next to `SHA256SUMS` (same per-file sha256). Every entry resolves at its listed path in the folder
+(`models/…`, `reports/…` included): a missing one rejects `MANIFEST_FILE_MISSING:<file>`; an entry a loader reads must
+match its bytes, sha256 and parquet rows (`MANIFEST_BYTES_MISMATCH` / `MANIFEST_SHA256_MISMATCH` / `MANIFEST_ROWS_MISMATCH`).
+A loader file that the manifest lists only under a subdirectory and that sits at the top of the folder — today
+`m2v_meta.json`, listed as `models/m2v_meta.json` — is that entry's copy: it is checked against the entry by base name and
+its reasons name the top-level file (`MANIFEST_SHA256_MISMATCH:m2v_meta.json`). Other top-level files the manifest does not
+list are warnings (`MANIFEST_UNLISTED:<file>`). The release identity stays `SHA256SUMS` (`data_version`,
+`activate --expect-sha256`).
+
+### Assembling a v1.2 stage folder (`deploy/release/assemble.sh`)
+
+The model team's download is flat (the 50 `models/…` / `reports/…` entries sit at the top) and has no `SHA256SUMS`, so it
+cannot be staged as is. The owner assembles the stage folder from it by hardlinks (the download is never written):
+
+```
+deploy/release/assemble.sh --hotspots-from "$EMBERLINE_RELEASE_ROOT/<previous stage folder>" \
+    [--extra-from <folder of re-published files>] <download folder> "$EMBERLINE_RELEASE_ROOT/<new key>"
+sha256sum "$EMBERLINE_RELEASE_ROOT/<new key>/SHA256SUMS"                                  # the activate hash
+```
+
+1. every `release_manifest.csv` entry is linked at its listed path (top level, `models/`, `reports/`), plus the manifest;
+   an entry the download lacks is taken from `--extra-from` (by listed path or base name), else the run fails;
+2. each loader file the manifest lists only under a subdirectory is linked at the top as well (`LOADER_TOP_LEVEL` in the
+   script: `m2v_meta.json`);
+3. `harmonized_hotspots/` and `harmonized_hotspots_static_flags/` are linked (`cp -al`) from `--hotspots-from` (the
+   download ships them only as tar files);
+4. `SHA256SUMS` = `sha256sum` of every top-level file in `LC_ALL=C` order (`<hex>␠␠<name>` lines);
+5. every `SHA256SUMS` line (a top-level entry, a top-level copy by base name, or the manifest itself) and every manifest
+   `bytes` value — plus the sha256 of each subdirectory entry, which `SHA256SUMS` does not cover — must equal the manifest;
+   only then is `<key>.tmp` moved to `<key>`.
+
+An existing target (or `<key>.tmp`) is refused, a download without `.done` is refused, and a failed run removes its own
+`<key>.tmp`. Download and stage folder must be on one filesystem. Reproduced on 2026-11-15: the 19:18 download state with
+`--hotspots-from v1.2-2026-11-15-r1` gives the owner's `v1.2-2026-11-15-r2` `SHA256SUMS` byte for byte (sha256 `15893a77…`);
+the re-published download (new `aoi_month_compare.parquet`, 3 new `reports/` entries) with `--extra-from
+v1.2-2026-11-15-add` gives `v1.2-2026-11-15-r3`'s (sha256 `dba6de4f…`). Tests: `tools/test/assemble.test.mjs`.

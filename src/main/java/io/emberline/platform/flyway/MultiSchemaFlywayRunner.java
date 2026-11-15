@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 @Profile("flyway")
 public class MultiSchemaFlywayRunner implements CommandLineRunner {
 
-    public static final List<String> SCHEMAS = List.of("catalog", "harmonized", "observation", "provenance", "ingest", "platform");
+    public static final List<String> SCHEMAS = List.of("catalog", "harmonized", "observation", "provenance", "outlook", "ingest", "platform", "fireinfo");
     private static final Logger log = LoggerFactory.getLogger(MultiSchemaFlywayRunner.class);
 
     private final DataSource dataSource;

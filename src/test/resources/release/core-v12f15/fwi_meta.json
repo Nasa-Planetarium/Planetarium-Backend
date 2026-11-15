@@ -1,0 +1,258 @@
+{
+  "created": "2026-11-15 00:49",
+  "system": "Canadian Forest Fire Weather Index System (FFMC, DMC, DC, ISI, BUI, FWI)",
+  "equations": "Van Wagner (1987) Forestry Technical Report 35 — cffdrs와 같은 식. 시험값(Van Wagner & Pickett 1985 첫날: T17 H42 W25 r0 → FFMC 87.7 DMC 8.5 DC 19.0 ISI 10.9 BUI 8.5 FWI 10.1) 일치",
+  "weather": "NASA POWER Daily v2.10.3 (MERRA-2, 0.5°, LST), 2012-01-01 ~ 2025-12-31, 한국 상자 112 지점·아르헨티나 1,236 지점",
+  "approximations": {
+    "temperature": "정오 기온 대신 T2M_MAX(일 최고) — 정오보다 약간 높아 FFMC·DMC·DC가 조금 높게 나올 수 있음",
+    "relative_humidity": "정오 습도 대신 RH2M_MIN_EST = 100·e_s(T2MDEW)/e_s(T2M_MAX) (Magnus) — 일 최저 습도 근사",
+    "wind": "정오 10 m 풍속 대신 WS10M 일평균(m/s × 3.6 = km/h) — 정오보다 낮아 ISI·FWI가 조금 낮게 나올 수 있음",
+    "precipitation": "전날 정오~오늘 정오 24시간 대신 PRECTOTCORR(그날 0~24시 LST)",
+    "start_values": "FFMC 85, DMC 6, DC 15 (2012-01-01); 겨울에도 멈추지 않고 이어서 계산(눈·월동 보정 없음). DC는 수개월 걸려 안정 → 2012년 상반기 참고용",
+    "day_length": "DMC Le·DC Lf 위도별 보정 (cffdrs 규칙: 남반구는 6개월 이동 표)"
+  },
+  "classes": "캐나다 전국 기준: low <5.2, moderate <11.2, high <21.3, very_high <38, extreme ≥38 (지역 기준 아님; 아르헨티나는 중앙값 20.3으로 높게 나와 상대 등급이 필요할 수 있음)",
+  "outputs": {
+    "fwi_cell_day": "data/processed/fwi_cell_day.parquet",
+    "fwi_aoi_day": "data/processed/fwi_aoi_day.parquet (0.1° 칸 × AOI 면적 가중치를 0.5° 칸으로 묶은 가중 평균)",
+    "fwi_clim_cell_month": "data/processed/fwi_clim_cell_month.parquet",
+    "fwi_clim_aoi_month": "data/processed/fwi_clim_aoi_month.parquet",
+    "validation_relative": "reports/fwi_validation_relative.csv"
+  },
+  "validation": {
+    "definition": "0.5° 칸 × 날짜(감지 이력이 있는 칸만, S-NPP d·d+1 정상): 그날 감지 없던 칸에 다음 날 감지가 생긴 비율(p_new_detection)",
+    "table": [
+      {
+        "region": "ARG",
+        "fwi_class": "low",
+        "cell_days": 1226315,
+        "p_next_detection": 0.029326070381590373,
+        "p_new_detection": 0.02350498705456072,
+        "fwi_median": 0.98283833,
+        "base_new": 0.04262935791871862,
+        "lift_new": 0.5513802741147935,
+        "auc_new_by_fwi": 0.5480920458924156
+      },
+      {
+        "region": "ARG",
+        "fwi_class": "moderate",
+        "cell_days": 763446,
+        "p_next_detection": 0.06466076186134972,
+        "p_new_detection": 0.04358401803111092,
+        "fwi_median": 8.090414,
+        "base_new": 0.04262935791871862,
+        "lift_new": 1.022394428605107,
+        "auc_new_by_fwi": 0.5480920458924156
+      },
+      {
+        "region": "ARG",
+        "fwi_class": "high",
+        "cell_days": 1020497,
+        "p_next_detection": 0.08249901763552465,
+        "p_new_detection": 0.051835059780525335,
+        "fwi_median": 15.891461,
+        "base_new": 0.04262935791871862,
+        "lift_new": 1.2159474669864656,
+        "auc_new_by_fwi": 0.5480920458924156
+      },
+      {
+        "region": "ARG",
+        "fwi_class": "very_high",
+        "cell_days": 1237316,
+        "p_next_detection": 0.09271762427706423,
+        "p_new_detection": 0.05243908973992569,
+        "fwi_median": 28.930079,
+        "base_new": 0.04262935791871862,
+        "lift_new": 1.2301168091696637,
+        "auc_new_by_fwi": 0.5480920458924156
+      },
+      {
+        "region": "ARG",
+        "fwi_class": "extreme",
+        "cell_days": 1637367,
+        "p_next_detection": 0.0921149626198647,
+        "p_new_detection": 0.044443224016928684,
+        "fwi_median": 53.73423,
+        "base_new": 0.04262935791871862,
+        "lift_new": 1.0425496931403133,
+        "auc_new_by_fwi": 0.5480920458924156
+      },
+      {
+        "region": "KR",
+        "fwi_class": "low",
+        "cell_days": 299006,
+        "p_next_detection": 0.022892517207012568,
+        "p_new_detection": 0.020468315048305225,
+        "fwi_median": 0.89840174,
+        "base_new": 0.02863896994439942,
+        "lift_new": 0.7147015094482464,
+        "auc_new_by_fwi": 0.6335292903007499
+      },
+      {
+        "region": "KR",
+        "fwi_class": "moderate",
+        "cell_days": 114648,
+        "p_next_detection": 0.045713837136277996,
+        "p_new_detection": 0.03817143695068415,
+        "fwi_median": 7.536012,
+        "base_new": 0.02863896994439942,
+        "lift_new": 1.3328495062773333,
+        "auc_new_by_fwi": 0.6335292903007499
+      },
+      {
+        "region": "KR",
+        "fwi_class": "high",
+        "cell_days": 50757,
+        "p_next_detection": 0.06410938392734007,
+        "p_new_detection": 0.04906407717370472,
+        "fwi_median": 14.20688,
+        "base_new": 0.02863896994439942,
+        "lift_new": 1.7131928022886032,
+        "auc_new_by_fwi": 0.6335292903007499
+      },
+      {
+        "region": "KR",
+        "fwi_class": "very_high",
+        "cell_days": 11441,
+        "p_next_detection": 0.08242286513416659,
+        "p_new_detection": 0.06325330247806384,
+        "fwi_median": 25.586535,
+        "base_new": 0.02863896994439942,
+        "lift_new": 2.2086444659450306,
+        "auc_new_by_fwi": 0.6335292903007499
+      },
+      {
+        "region": "KR",
+        "fwi_class": "extreme",
+        "cell_days": 763,
+        "p_next_detection": 0.10091743119266056,
+        "p_new_detection": 0.08383233532934131,
+        "fwi_median": 40.996525,
+        "base_new": 0.02863896994439942,
+        "lift_new": 2.927211959511672,
+        "auc_new_by_fwi": 0.6335292903007499
+      }
+    ]
+  },
+  "spread_nowcast_with_fwi": {
+    "result": [
+      {
+        "group": "KR_box",
+        "model": "p_xgb",
+        "pr_auc": 0.13840075738301835,
+        "roc_auc": 0.8641074808745468,
+        "brier": 0.0048686787486076355,
+        "prec_at_rec_0.5": 0.06865919246514864,
+        "prec_at_rec_0.7": 0.027888817306124983,
+        "n": 968499,
+        "positives": 5132,
+        "base_rate": 0.005298921320517625
+      },
+      {
+        "group": "KR_box",
+        "model": "p_xgb_fwi",
+        "pr_auc": 0.13477312253127405,
+        "roc_auc": 0.8627092625741,
+        "brier": 0.004883299581706524,
+        "prec_at_rec_0.5": 0.06700359506069921,
+        "prec_at_rec_0.7": 0.027040451552210725,
+        "n": 968499,
+        "positives": 5132,
+        "base_rate": 0.005298921320517625
+      },
+      {
+        "group": "KOR_only",
+        "model": "p_xgb",
+        "pr_auc": 0.16265136837087554,
+        "roc_auc": 0.868637499435305,
+        "brier": 0.0034375567920506,
+        "prec_at_rec_0.5": 0.09324067179614462,
+        "prec_at_rec_0.7": 0.027385373642011733,
+        "n": 592792,
+        "positives": 2254,
+        "base_rate": 0.0038023455107356373
+      },
+      {
+        "group": "KOR_only",
+        "model": "p_xgb_fwi",
+        "pr_auc": 0.15720439925717206,
+        "roc_auc": 0.867705675768027,
+        "brier": 0.00345440860837698,
+        "prec_at_rec_0.5": 0.09035516716106791,
+        "prec_at_rec_0.7": 0.026427291453835978,
+        "n": 592792,
+        "positives": 2254,
+        "base_rate": 0.0038023455107356373
+      },
+      {
+        "group": "ARG",
+        "model": "p_xgb",
+        "pr_auc": 0.20101708343658695,
+        "roc_auc": 0.8419946569614118,
+        "brier": 0.012211116962134838,
+        "prec_at_rec_0.5": 0.10390597085416735,
+        "prec_at_rec_0.7": 0.05022948154420176,
+        "n": 35231685,
+        "positives": 487967,
+        "base_rate": 0.013850231687754929
+      },
+      {
+        "group": "ARG",
+        "model": "p_xgb_fwi",
+        "pr_auc": 0.20081383680266476,
+        "roc_auc": 0.8417603884877422,
+        "brier": 0.012210302986204624,
+        "prec_at_rec_0.5": 0.10355022302955194,
+        "prec_at_rec_0.7": 0.05003667297390059,
+        "n": 35231685,
+        "positives": 487967,
+        "base_rate": 0.013850231687754929
+      }
+    ],
+    "note": "FWI 6개 특성 추가 시 PR-AUC 한국 상자 0.138→0.135, KOR 0.163→0.157, 아르헨티나 0.201→0.201 (개선 없음). 채택은 사용자 결정"
+  },
+  "relative_classes": {
+    "added": "2026-11-15",
+    "column": "fwi_rel_class (fwi_cell_day: FWI, fwi_aoi_day: fwi_mean) + fwi_pct",
+    "method": "같은 칸(AOI)·같은 달의 2012~2025 일 FWI 분포에서 그날 값의 백분위(중간 순위, (rank_avg-0.5)/n*100)",
+    "classes": {
+      "below_normal": "<25",
+      "normal": "25~75",
+      "above_normal": "75~90",
+      "well_above_normal": ">=90"
+    },
+    "labels_ko": {
+      "below_normal": "평년보다 낮음",
+      "normal": "평년",
+      "above_normal": "높음",
+      "well_above_normal": "매우 높음"
+    },
+    "new_dates": "기후 기간 밖 날짜는 fwi_pct 없이 fwi_clim_{cell,aoi}_month.parquet의 q25·q75·q90로 등급만 판정",
+    "caveat": "2012년 초 DC 안정화 기간도 기후값에 포함. 14년 표본이라 달마다 약 420일로 백분위를 정함.",
+    "app_default_badge": "fwi_rel_class (아르헨티나는 캐나다 절대 등급이 잘 맞지 않음)",
+    "validation_csv": "reports/fwi_validation_relative.csv",
+    "validation_summary": {
+      "KR": {
+        "lift_new": {
+          "below_normal": 0.56,
+          "normal": 1.03,
+          "above_normal": 1.32,
+          "well_above_normal": 1.53
+        },
+        "auc_new_by_pct": 0.596,
+        "auc_new_by_fwi_absolute": 0.634
+      },
+      "ARG": {
+        "lift_new": {
+          "below_normal": 0.63,
+          "normal": 1.05,
+          "above_normal": 1.29,
+          "well_above_normal": 1.32
+        },
+        "auc_new_by_pct": 0.579,
+        "auc_new_by_fwi_absolute": 0.548
+      }
+    },
+    "interpretation": "아르헨티나는 상대 등급이 단조 증가하고 AUC도 절대 FWI보다 높음. 한국은 둘 다 단조 증가하지만 절대 FWI의 AUC가 더 높음(계절 차이 — 봄철 건조기 — 가 절대값에 담기고, 상대 등급은 달별로 정규화해 그 신호를 뺌)."
+  }
+}

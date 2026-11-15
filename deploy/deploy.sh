@@ -1,6 +1,7 @@
 #!/bin/bash
 # Owner deploy: build the image from a worktree that already ran `./gradlew --offline bootJar`, import it into k3s,
 # apply the app manifest. Usage: deploy/deploy.sh <worktree> [--load <release_key>]
+# Host values (the LAN origin) come from the untracked env file read by deploy/render.sh.
 # Afterwards pl-web learns the active data_version (its proxy_cache key): see sync_data_version below.
 set -euo pipefail
 W=$1; shift
@@ -13,7 +14,7 @@ export KUBECONFIG=$HOME/.kube/omb-k3s.yaml
 NS=planetarium
 docker build -q -f "$W/deploy/docker/Dockerfile" -t "$IMG" "$W"
 docker save "$IMG" | sudo -n k3s ctr images import - >/dev/null
-render() { sed -e "s#__IMAGE__#$IMG#g" -e "s#__RELEASE_KEY__#${LOAD:-none}#g" -e "s#__RELEASE_SLUG__#$SLUG#g" "$W/deploy/k8s/planetarium-app.yaml"; }
+render() { sed -e "s#__IMAGE__#$IMG#g" -e "s#__RELEASE_KEY__#${LOAD:-none}#g" -e "s#__RELEASE_SLUG__#$SLUG#g" "$W/deploy/k8s/planetarium-app.yaml" | "$W/deploy/render.sh" -; }
 if [ -n "$LOAD" ]; then
   render | kubectl apply -f - 2>&1 | grep -v -i warning
 else

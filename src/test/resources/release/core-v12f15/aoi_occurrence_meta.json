@@ -1,0 +1,92 @@
+{
+  "name": "aoi_occurrence_nextmonth",
+  "created": "2026-11-15",
+  "unit": "Korea sgg (252, aoi_list level sgg, not hidden)",
+  "target": "next month >= 1 VIIRS reference detection inside the municipality (point location; static sources excluded, v1.2)",
+  "train_period": "2012-02 .. 2026-10 (KR status ok/nrt; month in progress excluded; MODIS-era m2v estimates not used as target)",
+  "features": [
+    "rate_all",
+    "rate_5y",
+    "n_years",
+    "med_value",
+    "lag1_value",
+    "lag2_value",
+    "lag3_value",
+    "lastyear_value",
+    "sido_rate",
+    "fwi_prev",
+    "fwi_prev_rel",
+    "month_sin",
+    "month_cos"
+  ],
+  "params": {
+    "objective": "binary:logistic",
+    "eval_metric": "logloss",
+    "tree_method": "hist",
+    "device": "cuda",
+    "max_depth": 4,
+    "learning_rate": 0.05,
+    "min_child_weight": 5,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "lambda": 1.0,
+    "seed": 42
+  },
+  "calibration": "platt",
+  "calibration_note": "fitted on year Y-1 predictions of a model trained on <= Y-2; the method with lower pooled Brier (Platt vs isotonic) is used",
+  "validation": "expanding window 2016-2025",
+  "adopted": true,
+  "adoption_rule": "PR-AUC higher and Brier lower than both baselines (pooled 2016-2025)",
+  "metrics": [
+    {
+      "method": "xgboost_isotonic",
+      "rows": 30240,
+      "pos_rate": 0.13019179894179894,
+      "pr_auc": 0.4132508278114022,
+      "roc_auc": 0.809105354742664,
+      "brier": 0.09340256452560425
+    },
+    {
+      "method": "xgboost_platt",
+      "rows": 30240,
+      "pos_rate": 0.13019179894179894,
+      "pr_auc": 0.42197006067715487,
+      "roc_auc": 0.8110386865186915,
+      "brier": 0.09265648573637009
+    },
+    {
+      "method": "xgboost_raw",
+      "rows": 30240,
+      "pos_rate": 0.13019179894179894,
+      "pr_auc": 0.42590272020241104,
+      "roc_auc": 0.8114698297601743,
+      "brier": 0.09225621819496155
+    },
+    {
+      "method": "baseline_same_month_rate",
+      "rows": 30240,
+      "pos_rate": 0.13019179894179894,
+      "pr_auc": 0.40373277177569206,
+      "roc_auc": 0.7894569722531074,
+      "brier": 0.09643875323052971
+    },
+    {
+      "method": "baseline_last_year_same_month",
+      "rows": 30240,
+      "pos_rate": 0.13019179894179894,
+      "pr_auc": 0.22342038445785295,
+      "roc_auc": 0.6427673671604044,
+      "brier": 0.16306216931216932
+    }
+  ],
+  "base_rate_extremes": {
+    "share_gt95": 0.0006613756613756613,
+    "share_lt05": 0.4537037037037037,
+    "share_eq0": 0.4537037037037037,
+    "share_eq1": 0.0006613756613756613,
+    "aoi_months": 3024,
+    "overall_pos_rate": 0.12875526858577707
+  },
+  "argentina": "not modelled: aoi_list has provinces only (no departamentos); use cell-level recurrence probability. Departamento level = future work.",
+  "latest_note": "target 2026-12; lag1 (2026-11) uses value_projected (month in progress), flagged lag1_projected"
+}

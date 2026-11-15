@@ -108,3 +108,97 @@ test('ipLiteral', () => {
   assert.equal(ipLiteral('2001:db8::1::2'), null);
   assert.equal(ipLiteral(null), null);
 });
+
+// ---- the one public POST ----
+
+import { readFileSync } from 'node:fs';
+import { FORECAST_MAX_BODY } from '../src/index.js';
+
+const FORECAST = '{"region":"SIDO_51","horizon_days":30}';
+const chunked = (bytes) => new ReadableStream({
+  start(c) {
+    for (let i = 0; i < bytes.length; i += 4096) c.enqueue(bytes.subarray(i, i + 4096));
+    c.close();
+  },
+});
+
+test('POST /api/v1/forecast forwards the JSON body with Content-Type application/json', async () => {
+  const origin = fakeOrigin(() => new Response('{"p_any":0.619,"notice":"위성"}', { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } }));
+  const res = await worker.fetch(req('/api/v1/forecast', {
+    method: 'POST', body: FORECAST,
+    headers: { 'content-type': 'application/json; charset=utf-8', 'x-client-ip': '203.0.113.7', cookie: 'a=b', 'accept-language': 'ko' },
+  }), env(origin));
+  assert.equal(res.status, 200);
+  assert.equal(await res.text(), '{"p_any":0.619,"notice":"위성"}');
+  assert.equal(res.headers.get('cache-control'), 'no-store');
+  assert.equal(origin.calls.length, 1);
+  const sent = origin.calls[0];
+  assert.equal(sent.method, 'POST');
+  assert.equal(sent.url, `${BASE}/api/v1/forecast`);
+  assert.equal(sent.headers.get('content-type'), 'application/json');
+  assert.equal(sent.headers.get('x-client-ip'), '203.0.113.7');
+  assert.equal(sent.headers.get('cookie'), null);
+  assert.equal(sent.headers.get('accept-language'), 'ko');
+  assert.equal(await sent.text(), FORECAST);
+});
+
+test('POST /api/v1/forecast: origin errors pass through (problem+json, 429 Retry-After)', async () => {
+  const limited = fakeOrigin(() => new Response('{"code":"rate_limited","error_no":10301}', { status: 429, headers: { 'content-type': 'application/problem+json', 'retry-after': '6' } }));
+  const res = await worker.fetch(req('/api/v1/forecast', { method: 'POST', body: FORECAST, headers: { 'content-type': 'application/json' } }), env(limited));
+  assert.equal(res.status, 429);
+  assert.equal(res.headers.get('retry-after'), '6');
+  assert.equal((await res.json()).error_no, 10301);
+});
+
+test('POST /api/v1/forecast body cap: Content-Length over, chunked over → 413; exactly the cap is forwarded', async () => {
+  const over = new Uint8Array(FORECAST_MAX_BODY + 1).fill(0x20);
+  for (const init of [
+    { method: 'POST', body: over, headers: { 'content-type': 'application/json', 'content-length': String(over.length) } },
+    { method: 'POST', body: chunked(over), duplex: 'half', headers: { 'content-type': 'application/json' } },
+  ]) {
+    const origin = fakeOrigin();
+    const res = await worker.fetch(req('/api/v1/forecast', init), env(origin));
+    assert.equal(res.status, 413);
+    assert.equal(res.headers.get('content-type'), 'application/problem+json');
+    assert.equal(origin.calls.length, 0);
+  }
+  const exact = new Uint8Array(FORECAST_MAX_BODY).fill(0x20);
+  exact.set(new TextEncoder().encode(FORECAST));
+  const origin = fakeOrigin();
+  const res = await worker.fetch(req('/api/v1/forecast', { method: 'POST', body: chunked(exact), duplex: 'half', headers: { 'content-type': 'application/json' } }), env(origin));
+  assert.equal(res.status, 200);
+  assert.equal((await origin.calls[0].arrayBuffer()).byteLength, FORECAST_MAX_BODY);
+});
+
+test('POST /api/v1/forecast without a JSON Content-Type is 415', async () => {
+  for (const type of [null, 'text/plain', 'application/x-www-form-urlencoded', 'application/jsonx']) {
+    const origin = fakeOrigin();
+    const headers = type ? { 'content-type': type } : {};
+    const res = await worker.fetch(req('/api/v1/forecast', { method: 'POST', body: FORECAST, headers }), env(origin));
+    assert.equal(res.status, 415, String(type));
+    assert.equal(origin.calls.length, 0);
+  }
+});
+
+test('every other POST, and PUT/PATCH/DELETE on the forecast path, is 405 Allow: GET, HEAD', async () => {
+  for (const path of ['/api/v1/forecast/', '/api/v1/forecasts', '/api/v1/forecast/x', '/api/forecast', '/api/v1/summary-queries',
+    '/api/v1/aois', '/api/v1/cells/frp', '/actuator/health', '/api/v1/forecast/..', '/api/v1/forecast%2F']) {
+    const origin = fakeOrigin();
+    const res = await worker.fetch(req(path, { method: 'POST', body: FORECAST, headers: { 'content-type': 'application/json' } }), env(origin));
+    assert.equal(res.status, 405, path);
+    assert.equal(res.headers.get('allow'), 'GET, HEAD', path);
+    assert.equal(origin.calls.length, 0, path);
+  }
+  for (const method of ['PUT', 'PATCH', 'DELETE', 'OPTIONS']) {
+    const origin = fakeOrigin();
+    const res = await worker.fetch(req('/api/v1/forecast', { method, body: method === 'OPTIONS' ? undefined : FORECAST }), env(origin));
+    assert.equal(res.status, 405, method);
+    assert.equal(res.headers.get('allow'), 'GET, HEAD');
+    assert.equal(origin.calls.length, 0);
+  }
+});
+
+test('the Worker body cap is emberline.limits.forecast-body-bytes', () => {
+  const yml = readFileSync(new URL('../../../../src/main/resources/application.yml', import.meta.url), 'utf8');
+  assert.equal(Number(/forecast-body-bytes:\s*(\d+)/.exec(yml)[1]), FORECAST_MAX_BODY);
+});

@@ -71,12 +71,13 @@ class CalendarService implements GetCalendarUseCase {
         if (row.isEmpty()) {
             Reading r = Reading.outOfRange();
             return new CalendarMonth(year, month, null, null, null, null, null, null, null, null, null, r.status(), null,
-                    null, null, null, null, List.of(), null, r.flags());
+                    null, null, null, null, null, null, null, List.of(), null, r.flags());
         }
         MonthRecord m = row.get();
         Reading r = ReadCaseRegistry.apply(m.reading());
         return new CalendarMonth(year, month, r.value(), r.valueLo(), r.valueHi(), r.valueProjected(), r.asOfDate(),
                 m.rawModis(), m.rawViirs(), m.valueSource(), m.dataSource(), r.status(), m.nCells(), r.verdict(),
-                m.percentile(), m.ratioToMedian(), m.lowSample(), List.of(), null, r.flags());
+                m.percentile(), m.ratioToMedian(), m.lowSample(), m.baselinePeriod(), m.continuityRatio(),
+                m.continuitySource(), List.of(), null, r.flags());
     }
 }

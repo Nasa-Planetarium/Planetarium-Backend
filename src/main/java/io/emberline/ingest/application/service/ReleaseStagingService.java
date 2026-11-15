@@ -13,6 +13,7 @@ import io.emberline.shared.error.ErrorCode;
 import io.emberline.shared.release.load.LoadResult;
 import io.emberline.shared.release.load.ReleaseLoadException;
 import io.emberline.shared.release.load.ReleaseLoader;
+import io.emberline.shared.release.load.ReleaseManifestCheck;
 import io.emberline.shared.release.load.ReleaseSource;
 import io.emberline.shared.release.load.ValidationReport;
 import java.nio.file.Files;
@@ -20,18 +21,20 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * stage: key → folder (inside the root) → lock → manifest + per-file sha256 → loaders' checks → VALIDATED →
- * LOADING → each context loads its own partitions → LOADED. Any failure: REJECTED with reason codes, partitions
- * dropped, the active release untouched.
+ * stage: key → folder (inside the root) → lock → manifest + per-file sha256 (SHA256SUMS, and release_manifest.csv when
+ * the release ships it) → loaders' checks → VALIDATED → LOADING → each context loads its own partitions → LOADED. Any
+ * failure: REJECTED with reason codes, partitions dropped, the active release untouched.
  */
 @Service
 class ReleaseStagingService implements StageReleaseUseCase {
@@ -43,15 +46,17 @@ class ReleaseStagingService implements StageReleaseUseCase {
     private final IngestLockPort locks;
     private final LoadTaskPort tasks;
     private final List<ReleaseLoader> loaders;
+    private final ReleaseManifestCheck releaseManifest;
     private final Clock clock;
 
     ReleaseStagingService(ReleaseRepository releases, ReleaseFolderPort folders, IngestLockPort locks, LoadTaskPort tasks,
-                          List<ReleaseLoader> loaders, Optional<Clock> clock) {
+                          List<ReleaseLoader> loaders, ReleaseManifestCheck releaseManifest, Optional<Clock> clock) {
         this.releases = releases;
         this.folders = folders;
         this.locks = locks;
         this.tasks = tasks;
         this.loaders = loaders.stream().sorted(Comparator.comparingInt(ReleaseLoader::order)).toList();
+        this.releaseManifest = releaseManifest;
         this.clock = clock.orElse(Clock.systemUTC());
     }
 
@@ -108,7 +113,10 @@ class ReleaseStagingService implements StageReleaseUseCase {
         }
         ValidationReport report = new ValidationReport();
         String methodVersion = folders.methodVersion(dir).orElse(null);
-        manifest.ifPresentOrElse(m -> checkFiles(dir, m, report), () -> report.reject("MANIFEST_MISSING", "SHA256SUMS", null));
+        Map<Path, String> hashes = new HashMap<>();
+        Function<Path, String> sha256 = file -> hashes.computeIfAbsent(file, folders::sha256);
+        manifest.ifPresentOrElse(m -> checkFiles(dir, m, sha256, report), () -> report.reject("MANIFEST_MISSING", "SHA256SUMS", null));
+        releaseManifest.check(dir, needed().keySet(), sha256, report);
         ReleaseSource source = new ReleaseSource(release.id(), key.value(), dir, methodVersion, report);
         if (report.ok()) {
             for (ReleaseLoader loader : loaders) {
@@ -164,15 +172,23 @@ class ReleaseStagingService implements StageReleaseUseCase {
         return null;
     }
 
-    /** Every file a loader needs is present (required) and listed in SHA256SUMS with a matching sha256. */
-    private void checkFiles(Path dir, Manifest manifest, ValidationReport report) {
+    /** File name → required, over every loader's {@link ReleaseLoader#files()}. */
+    private Map<String, Boolean> needed() {
         Map<String, Boolean> needed = new LinkedHashMap<>();
         for (ReleaseLoader loader : loaders) {
             for (ReleaseLoader.ReleaseFile f : loader.files()) {
                 needed.merge(f.name(), f.required(), Boolean::logicalOr);
             }
         }
-        needed.forEach((name, required) -> {
+        return needed;
+    }
+
+    /**
+     * Every file a loader needs is present (required) and listed in SHA256SUMS with a matching sha256. The sha256 of a
+     * file is computed once and shared with the release_manifest.csv check ({@link ReleaseManifestCheck}).
+     */
+    private void checkFiles(Path dir, Manifest manifest, Function<Path, String> sha256, ValidationReport report) {
+        needed().forEach((name, required) -> {
             Path file = dir.resolve(name);
             boolean present = Files.isRegularFile(file);
             if (!present) {
@@ -184,7 +200,7 @@ class ReleaseStagingService implements StageReleaseUseCase {
             String listed = manifest.files().get(name);
             if (listed == null) {
                 report.reject("MANIFEST_INCOMPLETE", name, null);
-            } else if (!listed.equalsIgnoreCase(folders.sha256(file))) {
+            } else if (!listed.equalsIgnoreCase(sha256.apply(file))) {
                 report.reject("FILE_HASH_MISMATCH", name, null);
             }
         });

@@ -1,5 +1,7 @@
 package io.emberline.shared.web.alias;
 
+import io.emberline.shared.error.EmberlineException;
+import io.emberline.shared.web.error.ProblemWriter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,16 +20,19 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * Serves the hand-off paths ({@code /api/<handoff path>}) by forwarding to the canonical /api/v1 route on the same
  * dispatcher, so validation, use case and caching are one path. Adds {@code Link: <canonical>; rel="canonical"}.
- * Aliases are not controllers, so springdoc never lists them.
+ * Aliases are not controllers, so springdoc never lists them. A request the rule refuses (e.g. one value under two
+ * names, MAPPING §8.1, or {@code aoi} with {@code aoi_id}) is answered here as a problem, not forwarded.
  */
 @Component
 @Order(0)
 public class HandoffAliasForwardFilter extends OncePerRequestFilter {
 
     private final HandoffAliasTable table;
+    private final ProblemWriter problems;
 
-    public HandoffAliasForwardFilter(HandoffAliasTable table) {
+    public HandoffAliasForwardFilter(HandoffAliasTable table, ProblemWriter problems) {
         this.table = table;
+        this.problems = problems;
     }
 
     @Override
@@ -45,7 +50,19 @@ public class HandoffAliasForwardFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
             return;
         }
-        HandoffAliasRule.Canonical canonical = rule.get().rewrite(request.getParameterMap(), request.getQueryString());
+        Optional<HandoffAliasRule.Rejection> refused = rule.get().rejection(request.getParameterMap());
+        if (refused.isPresent()) {
+            HandoffAliasRule.Rejection r = refused.get();
+            problems.write(request, response, r.code(), r.param(), r.detail());
+            return;
+        }
+        HandoffAliasRule.Canonical canonical;
+        try {
+            canonical = rule.get().rewrite(request.getParameterMap(), request.getQueryString());
+        } catch (EmberlineException e) {
+            problems.write(request, response, e.errorCode(), e.param(), e.detail());
+            return;
+        }
         response.setHeader(HttpHeaders.LINK, "<" + canonical.link() + ">; rel=\"canonical\"");
         request.getRequestDispatcher(canonical.path()).forward(new CanonicalRequest(request, canonical), response);
     }

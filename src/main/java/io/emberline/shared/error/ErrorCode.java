@@ -88,9 +88,10 @@ public enum ErrorCode {
     CSV_ROWS_TOO_MANY(30102, "range_too_large", 400, null),
     /**
      * why: self-intersection, NaN, or coordinates beyond ±180 / ±90.
-     * what: GeoPolygon constructor.
-     * how: 400 with {@code param=polygon}.
-     * opinion: —
+     * what: GeoPolygon constructor; the GeoJSON region of {@code POST /forecast} (ring not closed or under 4
+     * positions, a position that is not 2 finite numbers, JTS invalid — MAPPING §9.2).
+     * how: 400 with {@code param=polygon} ({@code param=region} on /forecast).
+     * opinion: the forecast service would fail inside shapely on such a shape; refusing it here keeps a client error 400.
      */
     INVALID_GEOMETRY(40001, "invalid_param", 400, null),
     /**
@@ -121,6 +122,115 @@ public enum ErrorCode {
      * opinion: same as the prototype.
      */
     CURSOR_STALE(40201, "cursor_stale", 409, null),
+    /**
+     * why: a typo, a truncated link or probing.
+     * what: {@code /fire-events/{eventId}} against the contract FireEventId pattern {@code ^(KR|ARG)_\d{8}_\d{4,6}$}.
+     * how: 400 with {@code param=event_id}, thrown before any lookup or cache key.
+     * opinion: a malformed id is an input error; a well-formed id the release lacks is 40402.
+     */
+    INVALID_EVENT_ID(40002, "invalid_param", 400, null),
+    /**
+     * why: a client that sends two area selectors and expects one to win.
+     * what: v1.2 layer routes take exactly one of {@code aoi_id} and {@code bbox}; the hand-off aliases accept both
+     * names {@code aoi} and {@code aoi_id} and refuse them together (MAPPING §8.1).
+     * how: 400 with {@code param}.
+     * opinion: no silent precedence between the two — the answer would depend on which one the server read first.
+     */
+    AOI_AND_BBOX(40003, "invalid_param", 400, null),
+    /**
+     * why: one day and a series asked in the same request.
+     * what: {@code /aois/{aoiId}/fwi} with {@code date} together with {@code start}·{@code end}.
+     * how: 400 with {@code param=date}.
+     * opinion: {@code date} after {@code as_of_date} is not this error — it answers 200 with {@code day: null}.
+     */
+    DATE_AND_RANGE(40004, "invalid_param", 400, null),
+    /**
+     * why: P1·P2 cost attack on the largest table (97.8 M rows).
+     * what: {@code /cells/frp} limits — estimated rows (cells × period) ≤ 50,000, day period ≤ 31 days, month period
+     * ≤ 24 months ({@code Version.limits} frp_rows, frp_day_days, frp_month_months).
+     * how: 400 with {@code param}, the limit in {@code detail}.
+     * opinion: estimated before the query; the file needs a (date_local, cell_id) index to answer at all.
+     */
+    FRP_RANGE_TOO_LARGE(40104, "range_too_large", 400, null),
+    /**
+     * why: a world-sized box on a layer route (P6 variant).
+     * what: bbox area over {@code Version.limits} frp_bbox_area_deg2 (100 deg², {@code /cells/frp}) or
+     * layer_bbox_area_deg2 (other v1.2 layer routes).
+     * how: 400 with {@code param=bbox}, the limit in {@code detail}.
+     * opinion: a world box for one day would pass the FRP row limit; the area limit stops it (contract {@code /cells/frp}).
+     */
+    BBOX_AREA_TOO_LARGE(40105, "range_too_large", 400, null),
+    /**
+     * why: a fire event list over decades of 1.24 M events.
+     * what: {@code /fire-events} period ({@code start}…{@code end}) over {@code Version.limits} fire_events_days.
+     * how: 400 with {@code param}, the limit in {@code detail}.
+     * opinion: pages are capped at 1,000 events; the period cap keeps the count and sort cheap.
+     */
+    EVENTS_RANGE_TOO_LARGE(40106, "range_too_large", 400, null),
+    /**
+     * why: a daily series longer than the screen can use.
+     * what: daily series of a v1.2 layer over 366 days — {@code /aois/{aoiId}/fwi} {@code start}·{@code end}
+     * ({@code Version.limits} fwi_series_days).
+     * how: 400 with {@code param}, the limit in {@code detail}.
+     * opinion: same 366-day span as the daily summary.
+     */
+    SERIES_RANGE_TOO_LARGE(40107, "range_too_large", 400, null),
+    /**
+     * why: a forecast region the planner cannot read (a typo, a swapped bbox, a wrong JSON type).
+     * what: {@code POST /forecast} {@code region} — not an aoi_id string, a bbox array or a GeoJSON object; aoi_id
+     * outside the aoi_id pattern; bbox not 4 finite numbers with west &lt; east, south &lt; north inside ±180 / ±90
+     * (MAPPING §9.2).
+     * how: 400 with {@code param=region}, before the forecast service is called.
+     * opinion: format only — whether a well-formed aoi_id exists is the service's answer (60401).
+     */
+    FORECAST_INVALID_REGION(40005, "invalid_param", 400, null),
+    /**
+     * why: a forecast period the planner cannot read.
+     * what: {@code POST /forecast} period — not exactly one of {@code horizon_days} (optionally with {@code start}) and
+     * {@code start}+{@code end}; {@code horizon_days} not a JSON integer in 1…{@code Version.limits}
+     * forecast_horizon_days_max; a date that is not YYYY-MM-DD; end before start (MAPPING §9.2).
+     * how: 400 with {@code param}, before the forecast service is called.
+     * opinion: whether the period falls inside the model's window (after as_of, within 12 months) is the service's
+     * answer (60001) — Spring does not repeat the model's calendar.
+     */
+    FORECAST_INVALID_PERIOD(40006, "invalid_param", 400, null),
+    /**
+     * why: P2 polygon bomb on the forecast route.
+     * what: {@code POST /forecast} GeoJSON region with more positions (all rings of all polygons) than
+     * {@code Version.limits} forecast_polygon_vertices.
+     * how: 400 with {@code param=region}, the limit in {@code detail}.
+     * opinion: separate from 40102 — a different limit on a different route; counted before any geometry is built.
+     */
+    FORECAST_POLYGON_TOO_COMPLEX(40108, "polygon_too_complex", 400, null),
+    /**
+     * why: a start…end span far beyond anything the planner can answer.
+     * what: {@code POST /forecast} {@code start}…{@code end} longer than {@code Version.limits} forecast_span_days.
+     * how: 400 with {@code param=end}, the limit in {@code detail}.
+     * opinion: the cap is above the model's own window (≤ 396 days), so it only stops nonsense, never a valid query.
+     */
+    FORECAST_RANGE_TOO_LARGE(40109, "range_too_large", 400, null),
+    /**
+     * why: P2 huge body on the one public POST route.
+     * what: {@code POST /forecast} body over {@code Version.limits} forecast_body_bytes, counted while reading.
+     * how: 413, the limit in {@code detail}; the body is never parsed.
+     * opinion: same 413 as 10102 by HTTP meaning; its own number because the limit is the route's, not the container's.
+     */
+    FORECAST_BODY_TOO_LARGE(40110, "range_too_large", 413, null),
+    /**
+     * why: a stale link or a release switch between two requests.
+     * what: a well-formed event id absent from {@code fire_events} of the pinned release (MAPPING §8.3).
+     * how: 404 with {@code param=event_id}.
+     * opinion: same {@code not_found} string as other absences; the number tells the operator it was an event lookup.
+     */
+    UNKNOWN_FIRE_EVENT(40402, "not_found", 404, null),
+    /**
+     * why: the active release does not carry the file a v1.2 layer reads (not loaded yet, or an older release).
+     * what: v1.2 layer routes — the layer file itself is absent (MAPPING §8.3); a region the layer does not cover is
+     * 200 with {@code coverage.available=false}, not this error.
+     * how: 503 with {@code Retry-After: 60}.
+     * opinion: separate from 50501 so the operator sees which layer is missing while the rest of the release serves.
+     */
+    LAYER_NOT_LOADED(50502, "data_not_loaded", 503, null),
     /**
      * why: operator mistake or a broken release folder.
      * what: release validator (files, columns, code values, duplicate keys, per-file sha256, method_version).
@@ -157,6 +267,21 @@ public enum ErrorCode {
      */
     DATA_NOT_LOADED(50501, "data_not_loaded", 503, null),
     /**
+     * why: the forecast service refused a well-formed query (period before or at as_of, a month beyond the model's
+     * 12-month window, a region the model cannot weigh).
+     * what: forecast service 400 with its JSON error body (MAPPING §9.4).
+     * how: 400; the service's message is the {@code detail} when it is safe (no paths, class names, line breaks).
+     * opinion: the model owns its calendar and regions; Spring maps, it does not re-check.
+     */
+    FORECAST_REJECTED(60001, "invalid_param", 400, null),
+    /**
+     * why: an aoi_id with the right format that aoi_list does not have.
+     * what: forecast service 404 with its JSON error body (MAPPING §9.4).
+     * how: 404 with {@code param=region}.
+     * opinion: same {@code unknown_aoi} string as 20401; the number tells the operator the forecast service said it.
+     */
+    FORECAST_UNKNOWN_REGION(60401, "unknown_aoi", 404, null),
+    /**
      * why: FIRMS answered 4xx/5xx.
      * what: FirmsWmsClient.
      * how: 502, upstream body discarded, log has status and key-masked URL.
@@ -170,6 +295,14 @@ public enum ErrorCode {
      * opinion: a missing key is not a startup failure, only this route answers 503.
      */
     UPSTREAM_UNAVAILABLE(60502, "upstream_unavailable", 503, null),
+    /**
+     * why: the forecast service is down, slow, restarting or answering something we do not understand.
+     * what: ForecastHttpClient — connect error, timeout, 5xx, a 4xx that is not the service's JSON error, a 200 that
+     * is not a JSON object or is larger than emberline.forecast.max-response-bytes.
+     * how: 503 with {@code Retry-After}; the service body is never echoed; WARN log with the status only.
+     * opinion: other routes stay healthy; the forecast screen shows "try again" rather than a wrong number.
+     */
+    FORECAST_UNAVAILABLE(60503, "upstream_unavailable", 503, null),
     /**
      * why: no or expired session.
      * what: AuthenticationEntryPoint.

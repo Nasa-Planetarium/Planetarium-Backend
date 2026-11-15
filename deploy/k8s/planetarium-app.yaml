@@ -10,7 +10,7 @@ data:
   EMBERLINE_REDIS_DURABLE_URL: redis://pl-redis-durable:6379
   FIRMS_WMS_BASE_URL: https://firms.modaps.eosdis.nasa.gov
   FIRMS_MAP_KEY_FILE: /run/secrets/firms/key
-  EMBERLINE_CORS_ALLOWED_ORIGINS: http://192.168.0.10:18490   # the public site is same-origin (Pages Function proxy)
+  EMBERLINE_CORS_ALLOWED_ORIGINS: __LAN_ORIGIN__   # the public site is same-origin (Pages Function proxy)
   EMBERLINE_ENV: prod                       # Redis key prefix em:prod: (default 'test' is for the acceptance suite)
   EMBERLINE_TRUSTED_PROXIES: 10.42.0.0/24   # k3s pod CIDR: pl-web nginx sets X-Forwarded-For (LAN: $remote_addr, tunnel: X-Client-IP)
   # Public exposure: ~200 reviewers may share one NAT address (docs/DEVIATIONS.md PUB-RL has the arithmetic).
@@ -29,6 +29,12 @@ data:
   EMBERLINE_RATELIMIT_GLOBAL_REFILLTOKENS: "700"
   EMBERLINE_RATELIMIT_GLOBAL_REFILLPERIOD: 1s
   EMBERLINE_FIRMS_BUDGETPERCALLER: "1500"
+  # POST /api/v1/forecast: scope forecast 1800/min per address (1.5 × 1,200 = one forecast per reviewer page view;
+  # docs/DEVIATIONS.md) — below heavy's 3600. The forecast service is Service planetarium-forecast (same namespace).
+  EMBERLINE_RATELIMIT_FORECAST_CAPACITY: "1800"
+  EMBERLINE_RATELIMIT_FORECAST_REFILLTOKENS: "1800"
+  EMBERLINE_RATELIMIT_FORECAST_REFILLPERIOD: 1m
+  EMBERLINE_FORECAST_URL: http://planetarium-forecast:8000
 ---
 apiVersion: apps/v1
 kind: Deployment

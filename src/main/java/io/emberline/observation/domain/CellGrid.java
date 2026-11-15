@@ -31,10 +31,43 @@ public final class CellGrid {
         return new double[][] {{w, s}, {e, s}, {e, n}, {w, n}, {w, s}};
     }
 
+    /** Grid row of the cell: south edge in tenths + 900 (0 … 1799). */
+    public static long row(long cellId) {
+        return cellId / LON_CELLS;
+    }
+
+    /** Grid column of the cell: west edge in tenths + 1800 (0 … 3599). */
+    public static long col(long cellId) {
+        return cellId % LON_CELLS;
+    }
+
+    /** The cell id of grid row and column (the inverse of {@link #row} / {@link #col}). */
+    public static long id(long row, long col) {
+        return row * LON_CELLS + col;
+    }
+
+    /** Center latitude = south edge + 0.05, from the id in twentieths so it prints exactly (e.g. 36.35). */
+    public static double centerLat(long cellId) {
+        return (2 * southTenths(cellId) + 1) / 20.0;
+    }
+
+    /** Center longitude = west edge + 0.05, from the id in twentieths so it prints exactly. */
+    public static double centerLon(long cellId) {
+        return (2 * westTenths(cellId) + 1) / 20.0;
+    }
+
+    /** Tenths index k of the first cell whose center (k + 0.5) / 10 is ≥ {@code low}. */
+    public static long firstCenter(double low) {
+        return (long) Math.ceil(low * 10 - 0.5);
+    }
+
+    /** Tenths index k of the last cell whose center (k + 0.5) / 10 is ≤ {@code high}. */
+    public static long lastCenter(double high) {
+        return (long) Math.floor(high * 10 - 0.5);
+    }
+
     /** How many cell centers ((k + 0.5) / 10) fall inside [low, high]. */
     public static long centersWithin(double low, double high) {
-        long first = (long) Math.ceil(low * 10 - 0.5);
-        long last = (long) Math.floor(high * 10 - 0.5);
-        return Math.max(0, last - first + 1);
+        return Math.max(0, lastCenter(high) - firstCenter(low) + 1);
     }
 }

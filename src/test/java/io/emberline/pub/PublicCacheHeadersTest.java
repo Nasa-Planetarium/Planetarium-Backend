@@ -33,7 +33,10 @@ class PublicCacheHeadersTest extends AppTestBase {
     static final List<String> PINNED = List.of("/api/v1/aois?level=country", "/api/v1/aois/KR", "/api/v1/aois/KR/boundary",
             "/api/v1/aois/KR/calendar?start_year=2024&end_year=2025", "/api/v1/aois/KR/months/2025-03/comparison",
             "/api/v1/aois/KR/summary?start=2025-01-01&end=2025-03-31&freq=month", "/api/v1/cells?aoi_id=KR&month=2025-03",
-            "/api/v1/methods/current", "/api/v1/satellite-status?start=2025-03-01&end=2025-03-31");
+            "/api/v1/methods/current");
+    // /api/v1/satellite-status left PINNED — it is @LayerCached now
+    // (public, max-age=0, s-maxage=3600, must-revalidate) and answers 503 on core, which ships no satellite files;
+    // its layer headers, ETag and 304 are pinned by io.emberline.f15p3.P3LayerApiTest (P3-7) on the v1.2 files.
 
     Path root;
     String coreEtag;

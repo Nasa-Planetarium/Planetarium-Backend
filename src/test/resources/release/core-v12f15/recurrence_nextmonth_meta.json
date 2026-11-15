@@ -1,0 +1,245 @@
+{
+  "name": "recurrence_nextmonth_xgb",
+  "status": "experiment (2026-11-15) — adoption decided by data lead",
+  "created": "2026-11-15",
+  "target": "P(next month 0.1° cell harmonized value >= 1), VIIRS-equivalent",
+  "display": "과거 반복 패턴 기반 전망(예측 정확도 표시) — not a weather/physics forecast",
+  "regions": {
+    "KR": "korea_cell_sgg_weights cells (1,123)",
+    "ARG": "Natural Earth ADM0 ARG cells (28,589)"
+  },
+  "label_rule": "label only where aoi_month.status == ok for that country-month; no row in harmonized_cell_month = 0",
+  "data_years": [
+    "2001-01",
+    "2026-07 (labels; final model trained on 2002-01 .. 2026-07 ok months)"
+  ],
+  "pre_2012_note": "2001–2011 values are MODIS→VIIRS model values (m2v), not VIIRS observations",
+  "features": [
+    "rec",
+    "n_prior",
+    "act3",
+    "act5",
+    "logv_mean",
+    "nb3_rec",
+    "nb5_rec",
+    "lag1_act",
+    "lag2_act",
+    "lag3_act",
+    "lag1_anom",
+    "lag2_anom",
+    "lag3_anom",
+    "fwi_prev",
+    "fwi_prev_rel",
+    "month_sin",
+    "month_cos",
+    "lat",
+    "lon",
+    "is_kr"
+  ],
+  "feature_notes": {
+    "rec": "same calendar month, all valid years from 2001 to the year before the target",
+    "lag_k": "k months before the target; partial current month uses value_projected (month-to-date projection)",
+    "fwi_prev_rel": "percentile of previous month mean FWI among the same month of earlier years only (>=3 years); NaN before",
+    "fwi_coverage": "FWI exists only at NASA POWER points used by the spread nowcast (0.5°); other cells NaN"
+  },
+  "params": {
+    "objective": "binary:logistic",
+    "eval_metric": "logloss",
+    "device": "cuda",
+    "tree_method": "hist",
+    "max_depth": 6,
+    "learning_rate": 0.08,
+    "min_child_weight": 10,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "lambda": 1.0,
+    "max_bin": 256,
+    "seed": 42
+  },
+  "rounds": 87,
+  "validation": "expanding window, test years 2016–2025, inner early stopping on Y-1",
+  "fold_rounds": [
+    {
+      "test_year": 2016,
+      "rounds": 54,
+      "train_rows": 4991616,
+      "sec": 9.6
+    },
+    {
+      "test_year": 2017,
+      "rounds": 94,
+      "train_rows": 5348160,
+      "sec": 6.8
+    },
+    {
+      "test_year": 2018,
+      "rounds": 145,
+      "train_rows": 5704704,
+      "sec": 8.9
+    },
+    {
+      "test_year": 2019,
+      "rounds": 96,
+      "train_rows": 6061248,
+      "sec": 8.0
+    },
+    {
+      "test_year": 2020,
+      "rounds": 156,
+      "train_rows": 6417792,
+      "sec": 10.1
+    },
+    {
+      "test_year": 2021,
+      "rounds": 81,
+      "train_rows": 6774336,
+      "sec": 8.3
+    },
+    {
+      "test_year": 2022,
+      "rounds": 45,
+      "train_rows": 7130880,
+      "sec": 7.3
+    },
+    {
+      "test_year": 2023,
+      "rounds": 48,
+      "train_rows": 7487424,
+      "sec": 7.7
+    },
+    {
+      "test_year": 2024,
+      "rounds": 105,
+      "train_rows": 7843968,
+      "sec": 10.2
+    },
+    {
+      "test_year": 2025,
+      "rounds": 69,
+      "train_rows": 8200512,
+      "sec": 9.4
+    }
+  ],
+  "metrics": [
+    {
+      "region": "ARG",
+      "method": "baseline1_recurrence_rate",
+      "rows": 3430680,
+      "pos_rate": 0.0805143586694183,
+      "roc_auc": 0.878118851098119,
+      "pr_auc": 0.507574677874512,
+      "brier": 0.053118277341127396
+    },
+    {
+      "region": "ARG",
+      "method": "baseline2_last_year_same_month",
+      "rows": 3430680,
+      "pos_rate": 0.0805143586694183,
+      "roc_auc": 0.6830695355432609,
+      "pr_auc": 0.22078382502164093,
+      "brier": 0.09395688027143478
+    },
+    {
+      "region": "ARG",
+      "method": "xgboost",
+      "rows": 3430680,
+      "pos_rate": 0.0805143586694183,
+      "roc_auc": 0.9166754041847138,
+      "pr_auc": 0.5841162079495217,
+      "brier": 0.04811859503388405
+    },
+    {
+      "region": "KR",
+      "method": "baseline1_recurrence_rate",
+      "rows": 134760,
+      "pos_rate": 0.048753339269813,
+      "roc_auc": 0.7854030855549632,
+      "pr_auc": 0.2930130842999065,
+      "brier": 0.040061380714178085
+    },
+    {
+      "region": "KR",
+      "method": "baseline2_last_year_same_month",
+      "rows": 134760,
+      "pos_rate": 0.048753339269813,
+      "roc_auc": 0.6347158772954388,
+      "pr_auc": 0.12556576405726996,
+      "brier": 0.068699911236763
+    },
+    {
+      "region": "KR",
+      "method": "xgboost",
+      "rows": 134760,
+      "pos_rate": 0.048753339269813,
+      "roc_auc": 0.8399706212821698,
+      "pr_auc": 0.3450371677717294,
+      "brier": 0.03789415955543518
+    }
+  ],
+  "baselines": {
+    "baseline1": "recurrence rate (rec)",
+    "baseline2": "same month last year active (0/1)"
+  },
+  "caveats": [
+    "Fire is often human-set (agricultural burning); recurrence reflects practice, not hazard.",
+    "Cells with no fire history get low probability by design; new fire locations are not predictable here.",
+    "Latest 2026-12 uses 2026-11 month-to-date (partial) and 2026-08..10 NRT months as lag features.",
+    "Korea: 16 of the top-20 2026-12 cells and 4 of 10 recurrent sites contain static industrial heat sources (static_source_cells_0.01deg). Without those cells KR PR-AUC is 0.158 (model) vs 0.132 (recurrence rate). Use has_static_source to hide or label them."
+  ],
+  "metrics_without_static_cells": [
+    {
+      "region": "KR",
+      "method": "xgboost",
+      "rows": 115560,
+      "pos_rate": 0.029923849082727588,
+      "roc_auc": 0.7846317192496517,
+      "pr_auc": 0.15829688032574302,
+      "brier": 0.02717561274766922
+    },
+    {
+      "region": "KR",
+      "method": "baseline1_recurrence_rate",
+      "rows": 115560,
+      "pos_rate": 0.029923849082727588,
+      "roc_auc": 0.7075753953999939,
+      "pr_auc": 0.13191570177477566,
+      "brier": 0.02765473537147045
+    },
+    {
+      "region": "KR",
+      "method": "baseline2_last_year_same_month",
+      "rows": 115560,
+      "pos_rate": 0.029923849082727588,
+      "roc_auc": 0.5756353620941698,
+      "pr_auc": 0.0552259807385532,
+      "brier": 0.05011249706149101
+    },
+    {
+      "region": "ARG",
+      "method": "xgboost",
+      "rows": 3341400,
+      "pos_rate": 0.07454180882264919,
+      "roc_auc": 0.9161542932870579,
+      "pr_auc": 0.5696531823426827,
+      "brier": 0.045457325875759125
+    },
+    {
+      "region": "ARG",
+      "method": "baseline1_recurrence_rate",
+      "rows": 3341400,
+      "pos_rate": 0.07454180882264919,
+      "roc_auc": 0.8766974881612798,
+      "pr_auc": 0.49434798493584875,
+      "brier": 0.05005283281207085
+    },
+    {
+      "region": "ARG",
+      "method": "baseline2_last_year_same_month",
+      "rows": 3341400,
+      "pos_rate": 0.07454180882264919,
+      "roc_auc": 0.677823837622604,
+      "pr_auc": 0.2071856835048443,
+      "brier": 0.08903184533119202
+    }
+  ]
+}

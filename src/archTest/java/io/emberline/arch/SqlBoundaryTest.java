@@ -14,8 +14,8 @@ import org.junit.jupiter.api.Test;
 /** B0.18 — SQL lives in src/main/resources/sql/&lt;ctx&gt;/ and never names another context's schema; Java SQL literals only in adapter.out. */
 class SqlBoundaryTest {
 
-    static final List<String> SCHEMAS = List.of("catalog", "harmonized", "observation", "provenance", "ingest", "platform",
-            "identity", "reporting", "audit", "operations");
+    static final List<String> SCHEMAS = List.of("catalog", "harmonized", "observation", "provenance", "outlook", "ingest", "platform",
+            "identity", "reporting", "audit", "operations", "fireinfo");
     static final Pattern DML_LITERAL = Pattern.compile("(?i)\"(\"\")?\\s*(SELECT|INSERT|UPDATE|DELETE)\\b");
 
     @Test
@@ -45,7 +45,7 @@ class SqlBoundaryTest {
         try (Stream<Path> files = Files.walk(root)) {
             for (Path f : files.filter(p -> p.getFileName().toString().startsWith("select_")).toList()) {
                 String ctx = root.relativize(f).getName(0).toString();
-                if (List.of("catalog", "harmonized", "observation", "provenance").contains(ctx)
+                if (List.of("catalog", "harmonized", "observation", "provenance", "outlook", "fireinfo").contains(ctx)
                         && !Files.readString(f).contains("release_id = :releaseId")) {
                     violations.add(f.toString());
                 }

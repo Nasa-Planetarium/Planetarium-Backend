@@ -48,7 +48,8 @@ class AoiMonthJdbcRepository implements AoiMonthReadPort {
                 i(rs, "n_cells"), d(rs, "compare_value"), d(rs, "baseline_median"), d(rs, "baseline_p25"),
                 d(rs, "baseline_p75"), d(rs, "percentile"), d(rs, "ratio_to_median"), i(rs, "n_baseline_years"),
                 rs.getString("verdict"), rs.getString("compare_status"), rs.getObject("low_sample", Boolean.class),
-                d(rs, "compare_value_projected"), rs.getObject("compare_as_of_date", LocalDate.class));
+                d(rs, "compare_value_projected"), rs.getObject("compare_as_of_date", LocalDate.class),
+                rs.getString("baseline_period"), d(rs, "continuity_ratio"), rs.getString("continuity_source"));
     }
 
     private static Double d(ResultSet rs, String column) throws SQLException {

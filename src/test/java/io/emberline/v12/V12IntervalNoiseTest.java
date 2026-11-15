@@ -36,7 +36,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * pl-v12c (CMD-bb9a2543f9e6): every value_lo above value_hi is kept as stored with one INTERVAL_INVERTED warning per file,
+ * pl-v12c: every value_lo above value_hi is kept as stored with one INTERVAL_INVERTED warning per file,
  * whatever its size, and /cells and /aois/{id}/calendar serve value, value_lo, value_hi as stored (the front orders the
  * band). Releases over owner fixture core-v11: {@code noise} (one cell month lo-hi = 5e-6, one KR aoi month lo-hi =
  * 2e-6), {@code edge} (one cell month lo-hi = exactly 1e-4), {@code wide} (one cell month lo-hi = 2e-4),

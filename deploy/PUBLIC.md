@@ -4,12 +4,12 @@ Target: about 200 concurrent reviewers (CMD-ddcff409522b, CMD-dd93c8af56c0).
 
 ```
 browser ─▶ Cloudflare Pages emberline.pages.dev (static, frontend repo GitHub Actions, Direct Upload)
-             └─ Pages Function /api/v1/* (GET/HEAD) ─ service binding API ─▶ Worker emberline-api (no public URL)
+             └─ Pages Function /api/v1/* (GET/HEAD; POST only /api/v1/forecast, F17) ─ service binding API ─▶ Worker emberline-api (no public URL)
                   └─ vpc_services binding ORIGIN ─▶ Workers VPC Service ─▶ Cloudflare Tunnel "emberline"
                        └─ cloudflared Deployment emberline-tunnel (K3s, ns planetarium, 2 replicas)
                             └─ pl-web-tunnel.planetarium.svc.cluster.local:8090 (nginx tunnel listener, allowlist)
                                  └─ pl-app:8080 (Spring)
-LAN: 192.168.0.10:18490 ─ pl-web-forward-18490.service (kubectl port-forward) ─▶ pl-web :8080 (static www + /api, as before)
+LAN: <HOST_IP>:<LAN_PORT> ─ pl-web-forward-<LAN_PORT>.service (kubectl port-forward) ─▶ pl-web :8080 (static www + /api, as before)
 ```
 
 Nothing in this repository holds a token, an account ID or a secret. Tokens are typed into the shell or the dashboard and
@@ -18,14 +18,14 @@ end up in K8s Secret `emberline-tunnel` or GitHub secrets only. Every `kubectl` 
 
 ## A. pl-web listeners (LAN entry unchanged)
 
-1. K3s ServiceLB is disabled on aibox, so the LAN entry stays `pl-web-forward-18490.service` (kubectl port-forward to
+1. K3s ServiceLB is disabled on the host, so the LAN entry stays `pl-web-forward-<LAN_PORT>.service` (kubectl port-forward to
    Service `pl-web:8080`). LAN callers reach nginx as 127.0.0.1 and share one rate-limit address (DEVIATIONS PUB-LAN).
-2. Apply: `kubectl apply -f deploy/k8s/planetarium.yaml` (new pl-web config with two listeners, ConfigMap
+2. Apply: `deploy/render.sh deploy/k8s/planetarium.yaml | kubectl apply -f -` (new pl-web config with two listeners, ConfigMap
    `pl-web-release`, Service `pl-web-tunnel`, NetworkPolicy `pl-web-ingress`). Then
    `kubectl -n planetarium rollout status deploy/pl-web`.
 3. Write the current `data_version` into nginx: `deploy/deploy.sh <worktree of the running image>` (no `--load`;
    rebuilds the same image tag, then syncs `pl-web-release`). Until this runs, nginx keys on `none` and caches nothing.
-4. Verify from another LAN machine: `curl -si http://192.168.0.10:18490/api/v1/version | head -20` → 200 with
+4. Verify from another LAN machine: `curl -si http://<HOST_IP>:<LAN_PORT>/api/v1/version | head -20` → 200 with
    `X-Cache:` and `Cache-Control: public, max-age=0, s-maxage=5, must-revalidate`; the site loads in a browser.
    The forward reconnects by itself after the pl-web restart (its loop retries every 3 s).
 
@@ -95,7 +95,8 @@ The workflow runs `wrangler pages deploy <build dir> --project-name emberline` w
 
 ### 7. Verify
 
-- `node tools/public-smoke.mjs https://emberline.pages.dev --pages` → every line PASS, last line `SMOKE OK`.
+- `node tools/public-smoke.mjs https://emberline.pages.dev --pages` → every line PASS, last line `SMOKE OK`
+  (includes `POST /api/v1/forecast` with no period → the app's 400 40006, so the forecast service is not called).
 - Listener-level, from the node: `kubectl -n planetarium port-forward svc/pl-web-tunnel 18090:8090` and
   `node tools/public-smoke.mjs http://127.0.0.1:18090` (every blocked path must be 404 here).
 - Small load first: `node tools/load-200.mjs https://emberline.pages.dev --users 20 --seconds 60`, then

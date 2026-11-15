@@ -331,7 +331,7 @@ class HotspotsApiTest {
         h.properties().forEach(e -> fields.add(e.getKey()));
         List<String> required = (List<String>) Contract.at("components", "schemas", "Hotspot").get("required");
         assertThat(fields).containsExactlyElementsOf(required);
-        assertThat(fields).contains("adm0_a3", "adm1_code").doesNotContain("country", "adm1");
+        assertThat(fields).contains("country", "adm1").doesNotContain("adm0_a3", "adm1_code");
         List<Object> first = Duck.query("SELECT latitude, longitude, epoch_us(acq_datetime_utc), "
                 + "CAST(date_local AS VARCHAR), satellite, cell_id, adm0_a3, adm1_code, weight_source, source FROM read_parquet(?) "
                 + "WHERE latitude BETWEEN 33 AND 39 AND longitude BETWEEN 124 AND 132 "
@@ -343,8 +343,9 @@ class HotspotsApiTest {
         assertThat(h.get("date_local").asString()).isEqualTo(first.get(3));
         assertThat(h.get("satellite").asString()).isEqualTo(first.get(4));
         assertThat(h.get("cell_id").asLong()).isEqualTo(((Number) first.get(5)).longValue());
-        assertThat(h.get("adm0_a3").asString()).isEqualTo(first.get(6));
-        assertThat(h.get("adm1_code").asString()).isEqualTo(first.get(7));
+        // contract names country / adm1 carry the file columns adm0_a3 / adm1_code as stored
+        assertThat(h.get("country").asString()).isEqualTo(first.get(6));
+        assertThat(h.get("adm1").asString()).isEqualTo(first.get(7));
         assertThat(h.get("weight_source").asString()).isEqualTo(first.get(8));
         assertThat(h.get("source").asString()).isEqualTo(first.get(9));
         List<String> top = new ArrayList<>();
@@ -354,6 +355,8 @@ class HotspotsApiTest {
         Map<String, Object> sumProps = (Map<String, Object>) ((Map<String, Object>) listProps.get("reference_sum")).get("properties");
         List<String> sumFields = new ArrayList<>();
         body.get("reference_sum").properties().forEach(e -> sumFields.add(e.getKey()));
+        // spec 272aedb dropped reference_sum.note; the screen note stays served (pinned by order 3) until the owner rules
+        sumFields.remove("note");
         assertThat(sumProps.keySet()).containsAll(sumFields);
     }
 
@@ -377,7 +380,8 @@ class HotspotsApiTest {
             String[] cells = lines.get(1).split(",", -1);
             assertThat(cells[2]).isEqualTo(h.get("acq_datetime_utc").asString());
             assertThat(Double.parseDouble(cells[0])).isEqualTo(h.get("latitude").asDouble());
-            assertThat(cells[10]).isEqualTo(h.get("adm0_a3").asString());
+            assertThat(cells[10]).isEqualTo(h.get("country").asString());
+            assertThat(cells[11]).isEqualTo(h.get("adm1").asString());
         }
         // R-FMT1: one negotiation path (HarmonizedWebConfig favorParameter "format"), an unknown format is 406 API-wide.
         assertThat(get("/api/v1/hotspots?" + q + "&format=xml").statusCode()).isEqualTo(406);
@@ -433,7 +437,7 @@ class HotspotsApiTest {
                 + "&format=csv>; rel=\"canonical\"");
         String header = csv.body().lines().findFirst().orElseThrow();
         assertThat(header).isEqualTo("latitude,longitude,acq_datetime_utc,date_local,satellite,instrument,frp,confidence,daynight,"
-                + "cell_id,adm0_a3,adm1_code,harmonized_weight,weight_lo,weight_hi,weight_source,is_reference,source,method_version");
+                + "cell_id,country,adm1,harmonized_weight,weight_lo,weight_hi,weight_source,is_reference,source,method_version");
         Map<String, Object> media = (Map<String, Object>) ((Map<String, Object>) ((Map<String, Object>) ((Map<String, Object>) ((Map<String, Object>)
                 Contract.at("paths", "/hotspots", "get").get("responses")).get("200")).get("content")).get("text/csv")).get("schema");
         assertThat(List.of(header.split(","))).containsExactlyElementsOf((List<String>) media.get("x-csv-columns"));
@@ -499,6 +503,28 @@ class HotspotsApiTest {
             assertThat(r.statusCode()).as(type).isEqualTo(404);
             assertThat(r.headers().firstValue("Content-Type").orElse("")).startsWith("application/problem+json");
             assertThat(json(r).get("code").asString()).isEqualTo("not_found");
+        }
+    }
+
+    @Test
+    @Order(15)
+    void f15_fileColumnNamesAdm0A3AndAdm1CodeReachNoResponse() {
+        // contract 272aedb: Hotspot fields and x-csv-columns are country / adm1; no alias keeps the file names
+        JsonNode body = json(get("/api/v1/hotspots?" + EXPORT_Q));
+        assertThat(body.get("count").asInt()).isPositive();
+        for (JsonNode h : body.get("hotspots")) {
+            assertThat(h.has("adm0_a3")).isFalse();
+            assertThat(h.has("adm1_code")).isFalse();
+            assertThat(h.has("country")).isTrue();
+            assertThat(h.has("adm1")).isTrue();
+        }
+        for (HttpResponse<String> csv : List.of(get("/api/v1/hotspots?" + EXPORT_Q + "&format=csv"),
+                get("/api/v1/hotspots?" + EXPORT_Q, "Accept", "text/csv"), get("/api/export.csv?type=hotspots&" + EXPORT_Q),
+                get("/api/hotspots?" + EXPORT_Q + "&format=csv"))) {
+            assertThat(csv.statusCode()).as(csv.body()).isEqualTo(200);
+            List<String> header = List.of(csv.body().lines().findFirst().orElseThrow().split(","));
+            assertThat(header).doesNotContain("adm0_a3", "adm1_code");
+            assertThat(header.subList(10, 12)).containsExactly("country", "adm1");
         }
     }
 

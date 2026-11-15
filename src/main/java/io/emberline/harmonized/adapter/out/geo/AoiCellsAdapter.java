@@ -3,6 +3,7 @@ package io.emberline.harmonized.adapter.out.geo;
 import io.emberline.harmonized.adapter.out.HarmonizedMetrics;
 import io.emberline.harmonized.adapter.out.HarmonizedSettings;
 import io.emberline.harmonized.adapter.out.parquet.ReleaseFiles;
+import io.emberline.harmonized.api.AoiCellRule;
 import io.emberline.harmonized.application.port.out.AoiCellsPort;
 import io.emberline.shared.error.DataUnavailableException;
 import io.emberline.shared.error.ErrorCode;
@@ -35,10 +36,11 @@ import tools.jackson.databind.json.JsonMapper;
  * AOI cell set (ruling R-SP1): cells whose centre lies inside the AOI boundary. The boundary is the AOI's feature in
  * the release's aoi_boundaries.geojson (the file catalog loaded; its bbox is the catalog bbox), the candidates are the
  * {@code harmonized.cell_center} rows inside that bbox, the test is JTS PreparedGeometry contains. Cached per
- * (release, aoi_id) in a bounded LRU.
+ * (release, aoi_id) in a bounded LRU. The same boundary and test answer {@link AoiCellRule} for other contexts' cell
+ * centres (outlook's 0.5° grid), so the rule has one implementation.
  */
 @Component
-class AoiCellsAdapter implements AoiCellsPort {
+class AoiCellsAdapter implements AoiCellsPort, AoiCellRule {
 
     static final String ROUTE = "summary";
     private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -75,6 +77,27 @@ class AoiCellsAdapter implements AoiCellsPort {
         Optional<long[]> computed = boundary(release, aoiId).map(g -> inside(release, g));
         cache.put(key, computed);
         return computed;
+    }
+
+    @Override
+    public Optional<boolean[]> centresInside(ReleaseRef release, String aoiId, double[] lats, double[] lons) {
+        if (lats.length != lons.length) {
+            throw new IllegalArgumentException("lats and lons differ in length");
+        }
+        return boundary(release, aoiId).map(boundary -> {
+            Envelope bbox = boundary.getEnvelopeInternal();
+            PreparedGeometry prepared = PreparedGeometryFactory.prepare(boundary);
+            boolean[] out = new boolean[lats.length];
+            for (int i = 0; i < lats.length; i++) {
+                out[i] = bbox.contains(lons[i], lats[i]) && centreInside(prepared, lats[i], lons[i]);
+            }
+            return out;
+        });
+    }
+
+    /** R-SP1: the cell centre lies inside the boundary (JTS contains — on the boundary line is outside). */
+    private static boolean centreInside(PreparedGeometry boundary, double lat, double lon) {
+        return boundary.contains(FACTORY.createPoint(new Coordinate(lon, lat)));
     }
 
     private Optional<Geometry> boundary(ReleaseRef release, String aoiId) {
@@ -118,7 +141,7 @@ class AoiCellsAdapter implements AoiCellsPort {
         }
         List<Long> ids = new ArrayList<>();
         for (double[] c : candidates) {
-            if (prepared.contains(FACTORY.createPoint(new Coordinate(c[2], c[1])))) {
+            if (centreInside(prepared, c[1], c[2])) {
                 ids.add((long) c[0]);
             }
         }

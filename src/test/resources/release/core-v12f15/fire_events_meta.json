@@ -1,0 +1,187 @@
+{
+  "created": "2026-11-15 10:55",
+  "linking": {
+    "dist_m": {
+      "VIIRS": 750.0,
+      "MODIS": 2000.0
+    },
+    "gap_days": 1,
+    "rule": "두 점 거리 ≤ 두 센서 중 큰 D, 현지 날짜 차 ≤ T → 같은 사건 (연결 성분)"
+  },
+  "burned_area": {
+    "product": "MCD64A1 v061 Burn Date",
+    "match_km": 1.0,
+    "date_pad_days": 3,
+    "pixel_km2": 0.21465867329655489,
+    "years": [
+      2012,
+      2025
+    ],
+    "tiles": {
+      "KR": [
+        "h27v05",
+        "h28v05"
+      ],
+      "ARG": [
+        "h11v11",
+        "h12v11",
+        "h12v12",
+        "h12v13",
+        "h13v11",
+        "h13v12",
+        "h13v13",
+        "h13v14",
+        "h14v14"
+      ]
+    }
+  },
+  "fire_regime": {
+    "large_event": "sum_weight ≥ 100.0 또는 burned_area_km2 ≥ 10.0",
+    "large_fire": "share_large ≥ 0.5",
+    "many_small": "share_large < 0.2",
+    "mixed": "0.2 ≤ share_large < 0.5",
+    "none": "W = 0",
+    "W": "AOI·월의 Σ harmonized_weight (0.1° 칸 → AOI 면적 가중)",
+    "rationale": "감지 100(VIIRS 375 m)은 수십 km² 규모 연소, 한국 일반 산불(평균 약 1 ha)은 감지 1~5개."
+  },
+  "validation": {
+    "uiseong_2025_03": [
+      {
+        "aoi_id": "KR",
+        "name": "대한민국",
+        "fire_regime": "large_fire",
+        "W": 2724.0,
+        "share_large": 0.6545521020889282,
+        "n_events": 237,
+        "top_event_id": "KR_20250323_0006"
+      },
+      {
+        "aoi_id": "SGG_47170",
+        "name": "안동시",
+        "fire_regime": "large_fire",
+        "W": 430.0,
+        "share_large": 0.6813953518867493,
+        "n_events": 47,
+        "top_event_id": "KR_20250323_0006"
+      },
+      {
+        "aoi_id": "SGG_47730",
+        "name": "의성군",
+        "fire_regime": "large_fire",
+        "W": 1064.0,
+        "share_large": 0.8223684430122375,
+        "n_events": 30,
+        "top_event_id": "KR_20250322_0021"
+      },
+      {
+        "aoi_id": "SGG_47750",
+        "name": "청송군",
+        "fire_regime": "large_fire",
+        "W": 272.0,
+        "share_large": 0.8235294222831726,
+        "n_events": 21,
+        "top_event_id": "KR_20250323_0006"
+      },
+      {
+        "aoi_id": "SGG_47760",
+        "name": "영양군",
+        "fire_regime": "mixed",
+        "W": 137.0,
+        "share_large": 0.20437955856323242,
+        "n_events": 10,
+        "top_event_id": "KR_20250326_0060"
+      },
+      {
+        "aoi_id": "SGG_47770",
+        "name": "영덕군",
+        "fire_regime": "large_fire",
+        "W": 420.0,
+        "share_large": 0.8642857074737549,
+        "n_events": 29,
+        "top_event_id": "KR_20250326_0013"
+      }
+    ],
+    "kr_2025_03_top_events": [
+      {
+        "event_id": "KR_20250323_0006",
+        "start_date": "2025-03-23",
+        "end_date": "2025-03-27",
+        "duration_days": 5,
+        "n_det": 641,
+        "sum_weight": 641.0,
+        "burned_area_km2": 97.24037900333937,
+        "sgg_all": "안동시,의성군,청송군"
+      },
+      {
+        "event_id": "KR_20250322_0021",
+        "start_date": "2025-03-22",
+        "end_date": "2025-03-27",
+        "duration_days": 6,
+        "n_det": 420,
+        "sum_weight": 420.0,
+        "burned_area_km2": 87.36608003169783,
+        "sgg_all": "안동시,의성군"
+      },
+      {
+        "event_id": "KR_20250326_0013",
+        "start_date": "2025-03-26",
+        "end_date": "2025-03-27",
+        "duration_days": 2,
+        "n_det": 256,
+        "sum_weight": 256.0,
+        "burned_area_km2": 77.70643973335287,
+        "sgg_all": "영덕군,청송군"
+      },
+      {
+        "event_id": "KR_20250323_0002",
+        "start_date": "2025-03-23",
+        "end_date": "2025-03-27",
+        "duration_days": 5,
+        "n_det": 193,
+        "sum_weight": 193.0,
+        "burned_area_km2": 34.989363747338444,
+        "sgg_all": "안동시,의성군"
+      },
+      {
+        "event_id": "KR_20250322_0001",
+        "start_date": "2025-03-22",
+        "end_date": "2025-03-26",
+        "duration_days": 5,
+        "n_det": 98,
+        "sum_weight": 98.0,
+        "burned_area_km2": 4.293173465931098,
+        "sgg_all": "산청군"
+      }
+    ],
+    "kfs_detection_by_size": [
+      {
+        "size": "1) <1ha",
+        "n": 1692,
+        "detected": 112,
+        "rate": 0.06619385342789598
+      },
+      {
+        "size": "2) 1-10ha",
+        "n": 266,
+        "detected": 64,
+        "rate": 0.24060150375939848
+      },
+      {
+        "size": "3) 10-100ha",
+        "n": 53,
+        "detected": 36,
+        "rate": 0.6792452830188679
+      },
+      {
+        "size": "4) >=100ha (large)",
+        "n": 25,
+        "detected": 23,
+        "rate": 0.92
+      }
+    ],
+    "kfs_period": [
+      "2022-01-01",
+      "2025-09-11"
+    ]
+  }
+}

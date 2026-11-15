@@ -142,7 +142,7 @@ class B2ApiTest extends B2AppBase {
         assertThat(n).isEqualTo(100);
         assertThat(keys.count(":c:calendar:") - before).isEqualTo(1);
         String dv8 = V11Fixtures.manifestSha(ROOT, "v11").substring(0, 8);
-        assertThat(keys.keys(":c:calendar:")).containsExactly("em:test:c:calendar:s1:" + MV + ":" + dv8 + ":KR");
+        assertThat(keys.keys(":c:calendar:")).containsExactly("em:test:c:calendar:s2:" + MV + ":" + dv8 + ":KR");
     }
 
     @Test
@@ -772,7 +772,7 @@ class B2ApiTest extends B2AppBase {
         assertThat(r.statusCode()).isEqualTo(200);
         assertThat(r.headers().firstValue("X-Data-Version")).hasValue("core#" + coreSha.substring(0, 12));
         assertCalendarMatches(json(r), Fixtures.releaseRoot().resolve("core"), false, "KR", 2024, 2025);
-        assertThat(keys.keys(":c:calendar:")).contains("em:test:c:calendar:s1:" + MV + ":" + coreSha.substring(0, 8) + ":KR");
+        assertThat(keys.keys(":c:calendar:")).contains("em:test:c:calendar:s2:" + MV + ":" + coreSha.substring(0, 8) + ":KR");
         HttpResponse<String> day = get("/api/v1/aois/KR/summary?start=2025-03-01&end=2025-03-05&freq=day");
         assertThat(day.statusCode()).as("v1 release has no harmonized_cell_day").isEqualTo(503);
         assertThat(json(day).get("code").asString()).isEqualTo("data_not_loaded");

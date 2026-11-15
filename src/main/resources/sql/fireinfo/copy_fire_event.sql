@@ -1,0 +1,1 @@
+COPY {child} (event_id, region, start_date, end_date, duration_days, n_det, sum_weight, frp_sum, frp_max, centroid_lat, centroid_lon, lat_min, lat_max, lon_min, lon_max, burned_area_km2, burn_confirmed, instrument, n_viirs, n_modis, country, adm1_code, sido_nm, sgg_cd, sgg_nm, sgg_all) FROM STDIN
